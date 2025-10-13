@@ -1,0 +1,8 @@
+[package]
+name = "lean"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+lean-sys = { path = "../lean_sys" }
+thiserror = { workspace = true }

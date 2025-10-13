@@ -1,0 +1,12 @@
+name = "map_array_bin"
+versionTags = []
+defaultTargets = ["main"]
+licenseFiles = ["../../LICENSE-APACHE", "../../LICENSE-MIT"]
+
+[[lean_exe]]
+name = "main"
+root = "Main"
+
+[[require]]
+name = "map_array"
+path = "../map_array"

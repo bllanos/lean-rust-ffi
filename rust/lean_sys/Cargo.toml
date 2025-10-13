@@ -1,0 +1,10 @@
+[package]
+name = "lean-sys"
+version.workspace = true
+edition.workspace = true
+
+[build-dependencies]
+lean-build = { path = "../lean_build" }
+
+[dev-dependencies]
+lean = { path = "../lean" }

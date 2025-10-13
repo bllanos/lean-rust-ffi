@@ -1,0 +1,14 @@
+[package]
+name = "lean-build"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+bindgen = { workspace = true }
+cc = { workspace = true }
+dirs = { workspace = true }
+itertools = { workspace = true }
+regex = { workspace = true }
+semver = { workspace = true }
+thiserror = { workspace = true }
+toml = { workspace = true }

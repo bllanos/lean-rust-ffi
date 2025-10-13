@@ -1,0 +1,12 @@
+{"version": "1.1.0",
+ "packagesDir": ".lake/packages",
+ "packages":
+ [{"type": "path",
+   "scope": "",
+   "name": "map_array",
+   "manifestFile": "lake-manifest.json",
+   "inherited": false,
+   "dir": "../map_array",
+   "configFile": "lakefile.toml"}],
+ "name": "map_array_bin",
+ "lakeDir": ".lake"}

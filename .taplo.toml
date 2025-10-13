@@ -1,0 +1,12 @@
+# Taplo TOML toolkit configuration file
+# See <https://taplo.tamasfe.dev/configuration/file.html>
+
+[formatting]
+reorder_keys = false
+
+[[rule]]
+include = ["**/Cargo.toml"]
+keys = ["dependencies", "build-dependencies", "dev-dependencies"]
+
+[rule.formatting]
+reorder_keys = true

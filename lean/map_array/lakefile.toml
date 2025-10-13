@@ -1,0 +1,9 @@
+name = "map_array"
+versionTags = []
+defaultTargets = ["MapArray"]
+licenseFiles = ["../../LICENSE-APACHE", "../../LICENSE-MIT"]
+
+[[lean_lib]]
+name = "MapArray"
+buildType = "release"
+defaultFacets = ["static"]

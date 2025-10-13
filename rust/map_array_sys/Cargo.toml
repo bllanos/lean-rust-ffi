@@ -1,0 +1,13 @@
+[package]
+name = "map-array-sys"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+lean-sys = { path = "../lean_sys" }
+
+[build-dependencies]
+lean-build = { path = "../lean_build" }
+
+[dev-dependencies]
+lean = { path = "../lean" }
