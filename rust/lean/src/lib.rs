@@ -1,5 +1,10 @@
 pub use lean_sys::{ELAN_TOOLCHAIN, LEAN_GITHASH, lean_obj_arg, lean_obj_res};
 
+// Re-export #[derive(Modules)].
+#[cfg(feature = "lean_derive")]
+#[allow(unused_imports)]
+pub use lean_derive::*;
+
 mod alloc;
 mod error;
 pub mod lean_types;

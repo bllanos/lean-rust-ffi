@@ -4,5 +4,9 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+lean_derive = { path = "./lean_derive", optional = true }
 lean-sys = { path = "../lean_sys" }
 thiserror = { workspace = true }
+
+[features]
+derive = ["lean_derive"]

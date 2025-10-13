@@ -1,6 +1,14 @@
 [workspace]
 resolver = "3"
-members = ["lean", "lean_build", "lean_sys", "map_array", "map_array_bin", "map_array_sys"]
+members = [
+  "lean",
+  "lean/lean_derive",
+  "lean_build",
+  "lean_sys",
+  "map_array",
+  "map_array_bin",
+  "map_array_sys"
+]
 
 [workspace.package]
 version = "0.1.0"
@@ -11,7 +19,9 @@ bindgen = "0.71.1"
 cc = "1.2.26"
 dirs = "6.0.0"
 itertools = "0.14.0"
+quote = "1.0.41"
 regex = "1.11.1"
 semver = "1.0.26"
+syn = "2.0.106"
 thiserror = "2.0.12"
 toml = "0.9.5"
