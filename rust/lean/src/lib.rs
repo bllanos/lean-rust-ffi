@@ -1,9 +1,14 @@
 pub use lean_sys::{ELAN_TOOLCHAIN, LEAN_GITHASH, lean_obj_arg, lean_obj_res};
 
-// Re-export #[derive(Modules)].
+// Re-export #[derive(Modules)]
 #[cfg(feature = "lean_derive")]
 #[allow(unused_imports)]
 pub use lean_derive::*;
+
+// Re-export other procedural macros
+#[cfg(feature = "lean_macro")]
+#[allow(unused_imports)]
+pub use lean_macro::*;
 
 mod alloc;
 mod error;

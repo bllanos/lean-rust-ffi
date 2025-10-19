@@ -1,0 +1,13 @@
+[package]
+name = "lean_macro"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+lean_macro_internals = { path = "../lean_macro_internals" }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true, features = ["derive"], default-features = false }

@@ -162,6 +162,7 @@ version = "0.1.0"
 dependencies = [
  "lean-sys",
  "lean_derive",
+ "lean_macro",
  "thiserror",
 ]
 
@@ -189,6 +190,16 @@ dependencies = [
 
 [[package]]
 name = "lean_derive"
+version = "0.1.0"
+dependencies = [
+ "lean_macro_internals",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "lean_macro"
 version = "0.1.0"
 dependencies = [
  "lean_macro_internals",

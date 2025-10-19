@@ -4,6 +4,6 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-lean = { path = "../lean", features = ["derive"] }
+lean = { path = "../lean", features = ["derive", "macro"] }
 lean-sys = { path = "../lean_sys" }
 map-array-sys = { path = "../map_array_sys" }
