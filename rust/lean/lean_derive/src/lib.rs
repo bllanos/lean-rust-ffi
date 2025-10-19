@@ -1,6 +1,8 @@
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{format_ident, quote};
+use quote::quote;
 use syn::parse_macro_input;
+
+use lean_macro_internals::parse;
 
 #[proc_macro_derive(Modules)]
 pub fn modules_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -11,32 +13,19 @@ pub fn modules_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream
     output.unwrap_or_else(syn::Error::into_compile_error).into()
 }
 
-const TYPE_NAME_SUFFIX: &str = "ModuleInitializer";
-
 fn impl_modules(ast: &syn::DeriveInput) -> syn::Result<TokenStream2> {
     let name = &ast.ident;
-    let name_string = name.to_string();
-    let module_name = if name_string.ends_with(TYPE_NAME_SUFFIX) {
-        let module_name = name_string.trim_end_matches(TYPE_NAME_SUFFIX);
-        if module_name.is_empty() {
-            return Err(syn::Error::new(
-                name.span(),
-                format!(
-                    "type name must contain a Lean module name before '{}'",
-                    TYPE_NAME_SUFFIX
-                ),
-            ));
-        } else {
-            module_name
-        }
-    } else {
-        return Err(syn::Error::new(
-            name.span(),
-            format!("type name must end in '{}'", TYPE_NAME_SUFFIX),
-        ));
-    };
     let module_initialization_function_ident =
-        format_ident!("initialize_{}", module_name, span = name.span());
+        parse::parse_lean_module_initialization_function_from_rust_module_initializer_type_name(
+            name,
+        )
+        .map_err(|mut error| {
+            error.combine(syn::Error::new(
+                name.span(),
+                "error using `Modules` trait with `#[derive]`",
+            ));
+            error
+        })?;
 
     let generated = quote! {
         unsafe impl lean::Modules for #name {

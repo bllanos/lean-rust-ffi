@@ -1,0 +1,9 @@
+[package]
+name = "lean_macro_internals"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true, default-features = false }

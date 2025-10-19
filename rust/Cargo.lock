@@ -191,6 +191,16 @@ dependencies = [
 name = "lean_derive"
 version = "0.1.0"
 dependencies = [
+ "lean_macro_internals",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "lean_macro_internals"
+version = "0.1.0"
+dependencies = [
  "proc-macro2",
  "quote",
  "syn",

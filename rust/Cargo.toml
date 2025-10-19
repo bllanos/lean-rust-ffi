@@ -3,6 +3,7 @@ resolver = "3"
 members = [
   "lean",
   "lean/lean_derive",
+  "lean/lean_macro_internals",
   "lean_build",
   "lean_sys",
   "map_array",
