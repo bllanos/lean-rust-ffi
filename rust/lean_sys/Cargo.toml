@@ -2,6 +2,18 @@
 name = "lean-sys"
 version.workspace = true
 edition.workspace = true
+# It is not possible to specify that a crate links to multiple system libraries.
+# See https://github.com/rust-lang/cargo/issues/4533
+#
+# links = [
+#     "Init",
+#     "leanrt",
+#     "uv",
+#     "gmp",
+#     "c++",
+#     "c++abi",
+#     "m"
+#   ]
 
 [build-dependencies]
 lean-build = { path = "../lean_build" }
