@@ -13,19 +13,19 @@ fn create_elan_cfg() -> Result<ElanCfg, Box<dyn Error>> {
     Ok(ElanCfg::from_env(Arc::new(
         move |n: Notification<'_>| match n.level() {
             NotificationLevel::Warn => {
-                println!("cargo:warning={n}");
+                println!("cargo::warning={n}");
             }
         },
     ))?)
 }
 
 fn rerun_build_if_elan_environment_variables_change() {
-    println!("cargo:rerun-if-env-changed={}", crate::ELAN_TOOLCHAIN);
+    println!("cargo::rerun-if-env-changed={}", crate::ELAN_TOOLCHAIN);
 }
 
 fn rerun_build_if_elan_settings_change(elan_cfg: &ElanCfg) {
     println!(
-        "cargo:rerun-if-changed={}",
+        "cargo::rerun-if-changed={}",
         elan_cfg.elan_dir.join("settings.toml").display()
     );
 }
@@ -43,7 +43,7 @@ fn rerun_build_if_lean_toolchain_override_changes(
             Err(format!("unexpected toolchain override_reason reason: {override_reason}").into())
         }
         OverrideReason::LeanpkgFile(path) => {
-            println!("cargo:rerun-if-changed={}", path.display());
+            println!("cargo::rerun-if-changed={}", path.display());
             Ok(())
         }
         OverrideReason::OverrideDB(_) => {
@@ -51,7 +51,7 @@ fn rerun_build_if_lean_toolchain_override_changes(
             Ok(())
         }
         OverrideReason::ToolchainFile(path) => {
-            println!("cargo:rerun-if-changed={}", path.display());
+            println!("cargo::rerun-if-changed={}", path.display());
             Ok(())
         }
     }
@@ -69,13 +69,13 @@ pub fn rerun_build_if_lean_version_changes() -> Result<(), Box<dyn Error>> {
 
     if lean_toolchain_version.is_floating_version() {
         let elan_toolchain_directory = &elan_cfg.toolchains_dir;
-        println!("cargo:warning=Lean toolchain: {lean_toolchain_version}");
+        println!("cargo::warning=Lean toolchain: {lean_toolchain_version}");
         println!(
-            "cargo:warning=specifying a floating version of the Lean toolchain (i.e. a channel) will slow down Cargo builds because the entire Elan toolchains directory (\"{}\") must be monitored for changes to detect a change in the latest Lean toolchain version",
+            "cargo::warning=specifying a floating version of the Lean toolchain (i.e. a channel) will slow down Cargo builds because the entire Elan toolchains directory (\"{}\") must be monitored for changes to detect a change in the latest Lean toolchain version",
             elan_toolchain_directory.display()
         );
         println!(
-            "cargo:rerun-if-changed={}",
+            "cargo::rerun-if-changed={}",
             elan_toolchain_directory.display()
         );
     }

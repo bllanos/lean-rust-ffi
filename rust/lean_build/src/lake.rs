@@ -147,7 +147,7 @@ fn rerun_build_if_lake_package_changes<
     lake_library_description: &LakeLibraryDescription<P, Q, R, S>,
 ) {
     println!(
-        "cargo:rerun-if-changed={}",
+        "cargo::rerun-if-changed={}",
         lake_library_description.get_source_directory().display()
     );
 }
@@ -175,10 +175,10 @@ pub fn build_and_link_static_lean_library<
     )?;
     let library_path = get_lake_target_path_from_lake_query_output(&stdout)?;
     if let Some(library_directory) = library_path.parent() {
-        println!("cargo:rustc-link-search={}", library_directory.display());
+        println!("cargo::rustc-link-search={}", library_directory.display());
     }
     println!(
-        "cargo:rustc-link-lib=static={}",
+        "cargo::rustc-link-lib=static={}",
         lake_library_description.target_name
     );
 
