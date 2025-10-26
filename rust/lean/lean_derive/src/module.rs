@@ -20,8 +20,8 @@ pub fn impl_modules(input: TokenStream2) -> syn::Result<TokenStream2> {
         })?;
 
     let generated = quote! {
-        unsafe impl lean::Modules for #name {
-            unsafe fn initialize_modules(builtin: u8, lean_io_world: lean_sys::lean_obj_arg) -> lean_sys::lean_obj_res {
+        unsafe impl ::lean::Modules for #name {
+            unsafe fn initialize_modules(builtin: u8, lean_io_world: ::lean_sys::lean_obj_arg) -> ::lean_sys::lean_obj_res {
                 unsafe { #module_initialization_function_ident(builtin, lean_io_world) }
             }
         }

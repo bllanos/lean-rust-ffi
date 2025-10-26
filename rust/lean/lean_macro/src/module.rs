@@ -39,7 +39,7 @@ pub fn impl_create_module_trait(
         /// initialized.
         // This should not be necessary. Perhaps there is a bug in Clippy?
         #[allow(clippy::missing_safety_doc)]
-        pub unsafe trait #trait_name: lean::Modules {}
+        pub unsafe trait #trait_name: ::lean::Modules {}
 
         unsafe impl #trait_name for #name {}
     };
