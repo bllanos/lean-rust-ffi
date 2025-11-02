@@ -11,3 +11,7 @@ lean_macro_internals = { path = "../lean_macro_internals" }
 proc-macro2 = { workspace = true }
 quote = { workspace = true }
 syn = { workspace = true, features = ["derive"], default-features = false }
+
+[dev-dependencies]
+lean = { path = "..", features = ["macro"] }
+lean-sys = { path = "../../lean_sys" }

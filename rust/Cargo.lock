@@ -202,6 +202,8 @@ dependencies = [
 name = "lean_macro"
 version = "0.1.0"
 dependencies = [
+ "lean",
+ "lean-sys",
  "lean_macro_internals",
  "proc-macro2",
  "quote",

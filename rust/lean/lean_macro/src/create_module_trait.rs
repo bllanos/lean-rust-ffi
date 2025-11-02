@@ -35,8 +35,8 @@ pub fn impl_create_module_trait(
         ///
         /// # Safety
         ///
-        /// Implementations of this trait must guarantee that the module is properly
-        /// initialized.
+        /// Implementations of this trait must guarantee that the module is
+        /// properly initialized.
         // This should not be necessary. Perhaps there is a bug in Clippy?
         #[allow(clippy::missing_safety_doc)]
         pub unsafe trait #trait_name: ::lean::Modules {}
