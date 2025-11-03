@@ -1,15 +1,15 @@
 [workspace]
 resolver = "3"
 members = [
+  "examples/map_array/rust/map_array",
+  "examples/map_array/rust/map_array_bin",
+  "examples/map_array/rust/map_array_sys",
   "lean",
   "lean/lean_derive",
   "lean/lean_macro",
   "lean/lean_macro_internals",
   "lean_build",
-  "lean_sys",
-  "map_array",
-  "map_array_bin",
-  "map_array_sys"
+  "lean_sys"
 ]
 
 [workspace.package]

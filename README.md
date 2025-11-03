@@ -8,11 +8,12 @@ This repository contains Rust [crates](https://doc.rust-lang.org/book/ch07-01-pa
 
 - [Setup](#setup)
   - [Other useful tools](#other-useful-tools)
-- [Example](#example)
-  - [Lean](#lean)
-  - [C](#c)
-  - [Unsafe Rust](#unsafe-rust)
-  - [Safe Rust](#safe-rust)
+- [Examples](#examples)
+  - [Using Lean from Rust](#using-lean-from-rust)
+    - [Lean](#lean)
+    - [C](#c)
+    - [Unsafe Rust](#unsafe-rust)
+    - [Safe Rust](#safe-rust)
 - [FAQ](#faq)
   - [Why use Lean?](#why-use-lean)
   - [Why use Rust?](#why-use-rust)
@@ -53,19 +54,21 @@ This repository contains Rust [crates](https://doc.rust-lang.org/book/ch07-01-pa
 
 1. Tools for analyzing memory management problems, such as [Valgrind](https://valgrind.org/)
 
-## Example
+## Examples
 
-### Lean
+### Using Lean from Rust
 
-We created a small Lean library in [`lean/map_array/MapArray/Basic.lean`](lean/map_array/MapArray/Basic.lean) that we wish to use in a Rust program.
+#### Lean
 
-There is a sample Lean program that uses the library in [`lean/map_array_bin/Main.lean`](lean/map_array_bin/Main.lean).
+We created a small Lean library in [`examples/map_array/lean/map_array/MapArray/Basic.lean`](examples/map_array/lean/map_array/MapArray/Basic.lean) that we wish to use in a Rust program.
+
+There is a sample Lean program that uses the library in [`examples/map_array/lean/map_array_bin/Main.lean`](examples/map_array/lean/map_array_bin/Main.lean).
 
 To run the Lean program, run the following commands in a terminal:
 
 ```bash
 # Navigate into the `lean/map_array_bin` directory
-cd lean/map_array_bin
+cd examples/map_array/lean/map_array_bin
 # Build and run the program
 lake exe main
 ```
@@ -80,20 +83,20 @@ Output array: #[6, 21, 36, 51, 66, 81]
 Program end
 ```
 
-The program creates an array of `6` numbers and passes it to the `map` function from the [Lean `MapArray` library](lean/map_array/MapArray/Basic.lean). `map` requires an options argument, of type `MapOptions`, that contains an addend and a multiplicand. `map` produces an array where each number has been summed with the addend and then multiplied by the multiplicand.
+The program creates an array of `6` numbers and passes it to the `map` function from the [Lean `MapArray` library](examples/map_array/lean/map_array/MapArray/Basic.lean). `map` requires an options argument, of type `MapOptions`, that contains an addend and a multiplicand. `map` produces an array where each number has been summed with the addend and then multiplied by the multiplicand.
 
-### C
+#### C
 
 Lean 4 compiles code by generating C code and then compiling the C code with a C compiler. As such, Lean libraries can be used directly by C programs, as explained in Lean's [Foreign Function Interface documentation](https://github.com/leanprover/lean4/blob/master/doc/dev/ffi.md).
 
 Our first step in using Lean libraries from Rust is to learn how to use them from C.
 
-We created a C program with the same functionality as the [Lean program](#lean) in [`c/main.c`](c/main.c).
+We created a C program with the same functionality as the [Lean program](#lean) in [`examples/map_array/c/main.c`](examples/map_array/c/main.c).
 
 To run the Lean program, run the following commands.
 
 ```bash
-cd c
+cd examples/map_array/c
 # Run the `test.sh` script
 ./test.sh
 ```
@@ -130,7 +133,7 @@ Program end
 
 The output includes the commands used to build the program, not only the output from the program itself.
 
-### Unsafe Rust
+#### Unsafe Rust
 
 Rust programmers usually integrate code from other languages in two steps:
 
@@ -138,12 +141,11 @@ Rust programmers usually integrate code from other languages in two steps:
 
 2. One or more high-level Rust crates depend on the low-level crate and provide idiomatic Rust types and functions that can be used by Rust code without the `unsafe` keyword. Different programmers may have different needs and preferences that lead to different high-level interfaces, but they can all reuse the minimal low-level interface of the library from the `*-sys` crate.
 
-[`rust/map_array_bin/src/bin/low_level.rs`](rust/map_array_bin/src/bin/low_level.rs) is a Rust program that uses our `*-sys` crates for the Lean runtime and for the [Lean `MapArray` library](lean/map_array/MapArray/Basic.lean). It replicates the [C program](#c) and therefore looks very similar. The `unsafe` keyword appears throughout.
+[`examples/map_array/rust/map_array_bin/src/bin/low_level.rs`](examples/map_array/rust/map_array_bin/src/bin/low_level.rs) is a Rust program that uses our `*-sys` crates for the Lean runtime and for the [Lean `MapArray` library](examples/map_array/lean/map_array/MapArray/Basic.lean). It replicates the [C program](#c) and therefore looks very similar. The `unsafe` keyword appears throughout.
 
 To run `low_level.rs`, run the following commands:
 
 ```bash
-cd rust
 cargo run -p map-array-bin --bin low_level
 ```
 
@@ -160,7 +162,7 @@ Program end
 
 This low-level program depends on the following Rust crates from this project:
 
-1. [`lean-build`](rust/lean_build) contains utilities for writing the [build scripts](https://doc.rust-lang.org/cargo/reference/build-scripts.html) of `*-sys` crates that use Lean and Lean libraries.
+1. [`lean-build`](lean_build) contains utilities for writing the [build scripts](https://doc.rust-lang.org/cargo/reference/build-scripts.html) of `*-sys` crates that use Lean and Lean libraries.
 
    `lean-build` helps with:
 
@@ -168,20 +170,19 @@ This low-level program depends on the following Rust crates from this project:
    2. Defining Rust equivalents of the types and functions in the C code output by Lean's compiler. We do so using [`bindgen`](https://rust-lang.github.io/rust-bindgen/).
    3. Ensuring that Cargo automatically rebuilds Lean and Rust code whenever there the Lean toolchain version Lean code change.
 
-2. [`lean-sys`](rust/lean_sys) is a low-level crate that links to the Lean runtime using `lean-build`.
+2. [`lean-sys`](lean_sys) is a low-level crate that links to the Lean runtime using `lean-build`.
 
-3. [`map-array-sys`](rust/map_array_sys) is a low-level crate that links to the [Lean `MapArray` library](lean/map_array/MapArray/Basic.lean) using `lean-build`.
+3. [`map-array-sys`](examples/map_array/rust/map_array_sys) is a low-level crate that links to the [Lean `MapArray` library](examples/map_array/lean/map_array/MapArray/Basic.lean) using `lean-build`.
 
-### Safe Rust
+#### Safe Rust
 
-[`rust/map_array_bin/src/bin/high_level.rs`](rust/map_array_bin/src/bin/high_level.rs) is a Rust program that uses a high-level Rust interface for the [Lean `MapArray` library](lean/map_array/MapArray/Basic.lean). It is intended to resemble the original [Lean program](#lean), while following Rust style conventions.
+[`examples/map_array/rust/map_array_bin/src/bin/high_level.rs`](examples/map_array/rust/map_array_bin/src/bin/high_level.rs) is a Rust program that uses a high-level Rust interface for the [Lean `MapArray` library](examples/map_array/lean/map_array/MapArray/Basic.lean). It is intended to resemble the original [Lean program](#lean), while following Rust style conventions.
 
 `high_level.rs` does not contain the `unsafe` keyword. To emphasize this point, it begins with `#![forbid(unsafe_code)]`, which causes the Rust compiler to raise an error when it encounters `unsafe` code.
 
 To run `high_level.rs`, run the following commands:
 
 ```bash
-cd rust
 cargo run -p map-array-bin --bin high_level
 ```
 
@@ -198,9 +199,9 @@ Program end
 
 This high-level program depends on the following additional Rust crates:
 
-1. [`lean`](rust/lean) provides higher-level abstractions on top of [`lean-sys`](rust/lean_sys).
+1. [`lean`](lean) provides higher-level abstractions on top of [`lean-sys`](lean_sys).
 
-2. [`map-array`](rust/map_array) provides higher-level abstractions on top of [`map-array-sys`](rust/map_array_sys).
+2. [`map-array`](examples/map_array/rust/map_array) provides higher-level abstractions on top of [`map-array-sys`](examples/map_array/rust/map_array_sys).
 
 ## FAQ
 
@@ -244,7 +245,7 @@ A program written in a functional programming language combines a pure functiona
 
 ## Credits
 
-The [`rust/lean_build/src/elan_fork/`](rust/lean_build/src/elan_fork) directory contains code adapted from [Elan](https://github.com/leanprover/elan), the Lean version manager. Refer to [`rust/lean_build/src/elan_fork/README.md`](rust/lean_build/src/elan_fork/README.md) for more information.
+The [`lean_build/src/elan_fork/`](lean_build/src/elan_fork) directory contains code adapted from [Elan](https://github.com/leanprover/elan), the Lean version manager. Refer to [`lean_build/src/elan_fork/README.md`](lean_build/src/elan_fork/README.md) for more information.
 
 ## References
 
