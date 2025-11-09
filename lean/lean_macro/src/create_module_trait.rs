@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{TokenStreamExt, format_ident, quote};
+use quote::{TokenStreamExt, quote};
 use syn::{DeriveInput, spanned::Spanned};
 
 use lean_macro_internals::parse;
@@ -20,7 +20,7 @@ pub fn impl_create_module_trait(
     let mut generated = annotated_item.clone();
     let derive_input: DeriveInput = syn::parse2(annotated_item)?;
     let name = &derive_input.ident;
-    let module_name = parse::parse_lean_module_name_from_rust_module_initializer_type_name(name)
+    let trait_name = parse::parse_lean_module_trait_from_rust_module_initializer_type_name(name)
         .map_err(|mut error| {
             error.combine(syn::Error::new(
                 name.span(),
@@ -28,7 +28,6 @@ pub fn impl_create_module_trait(
             ));
             error
         })?;
-    let trait_name = format_ident!("{}Module", module_name, span = name.span());
 
     let appended = quote! {
         /// A trait implemented by types that initialize this Lean module

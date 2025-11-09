@@ -35,8 +35,8 @@ unsafe impl lean::Modules for TwoModuleInitializer {
 
 combine_lean_module_initializers! {
     pub BothModules {
-        TwoModuleInitializer : TwoModule,
-        OneModuleInitializer : OneModule,
+        TwoModuleInitializer : TwoModule, // Testing the full syntax
+        OneModuleInitializer, // Testing the shorter syntax
     }
 }
 

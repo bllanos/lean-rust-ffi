@@ -4,9 +4,12 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::{ToTokens, TokenStreamExt, quote};
 use syn::{
     Ident, Token, Visibility, braced,
-    parse::{Parse, ParseStream, Result},
+    parse::{Parse, ParseStream},
     punctuated::Punctuated,
+    spanned::Spanned,
 };
+
+use lean_macro_internals::parse;
 
 /// Parses the following syntax:
 ///
@@ -39,7 +42,18 @@ use syn::{
 ///
 /// Module initializer types and module initialization traits can have arbitrary
 /// names, for flexibility. They do not need to follow the naming conventions
-/// imposed by other macros.
+/// imposed by other macros. If some module initializer types do follow the
+/// naming conventions, however, then the associated module initialization
+/// traits can be omitted. For example:
+///
+/// ```text
+/// combine_lean_module_initializers! {
+///     pub AllParsingModulesInitializer {
+///         ParsingTypes : ParsingTypesModule,
+///         YamlParser : YamlParserModule,
+///         JsonParserModuleInitializer, // Simplified because the type has a known suffix
+///     }
+/// }
 pub struct CombineLeanModuleInitializers {
     visibility: Visibility,
     name: Ident,
@@ -48,7 +62,7 @@ pub struct CombineLeanModuleInitializers {
 }
 
 impl Parse for CombineLeanModuleInitializers {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
         let visibility: Visibility = input.parse()?;
         let name: Ident = input.parse()?;
 
@@ -109,10 +123,26 @@ struct ModuleInitializationPair {
 }
 
 impl Parse for ModuleInitializationPair {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
         let module_initializer: Ident = input.parse()?;
-        input.parse::<Token![:]>()?;
-        let module_trait: Ident = input.parse()?;
+        let module_trait: Ident = match input.parse::<Token![:]>() {
+            Ok(colon) => input.parse().map_err(|mut error| {
+                error.combine(syn::Error::new(
+                    colon.span(),
+                    "a trait that has `lean::Modules` as a supertrait must follow the colon",
+                ));
+                error
+            }),
+            Err(_) => parse::parse_lean_module_trait_from_rust_module_initializer_type_name(
+                &module_initializer,
+            ).map_err(|mut error| {
+                error.combine(syn::Error::new(
+                    module_initializer.span(),
+                    "a colon and the name of a trait that has `lean::Modules` as a supertrait must follow the type name if the type name does not have a standard suffix",
+                ));
+                error
+            }),
+        }?;
 
         Ok(Self {
             module_initializer,

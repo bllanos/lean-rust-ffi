@@ -4,6 +4,7 @@ use std::fmt;
 use proc_macro2::Ident;
 use quote::format_ident;
 
+const TRAIT_NAME_SUFFIX: &str = "Module";
 const TYPE_NAME_SUFFIX: &str = "ModuleInitializer";
 
 #[derive(Debug, Eq, PartialEq)]
@@ -41,7 +42,7 @@ fn parse_lean_module_name_from_rust_module_initializer_type_name_inner(
     }
 }
 
-pub fn parse_lean_module_name_from_rust_module_initializer_type_name(
+fn parse_lean_module_name_from_rust_module_initializer_type_name(
     name: &Ident,
 ) -> syn::Result<String> {
     parse_lean_module_name_from_rust_module_initializer_type_name_inner(name)
@@ -57,4 +58,12 @@ pub fn parse_lean_module_initialization_function_from_rust_module_initializer_ty
         module_name,
         span = name.span()
     ))
+}
+
+pub fn parse_lean_module_trait_from_rust_module_initializer_type_name(
+    name: &Ident,
+) -> syn::Result<Ident> {
+    let module_name = parse_lean_module_name_from_rust_module_initializer_type_name(name)?;
+    let trait_name = format_ident!("{}{}", module_name, TRAIT_NAME_SUFFIX, span = name.span());
+    Ok(trait_name)
 }
