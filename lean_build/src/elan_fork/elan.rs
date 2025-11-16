@@ -6,5 +6,6 @@ mod toolchain;
 
 pub use super::elan_utils::notify;
 pub use config::*;
+pub use errors::Error;
 pub use notifications::*;
 pub use toolchain::*;

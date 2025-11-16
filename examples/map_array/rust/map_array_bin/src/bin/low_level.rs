@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::ffi::CStr;
 use std::slice;
 
@@ -17,7 +16,7 @@ use map_array_sys::{
 #[global_allocator]
 static ALLOCATOR: MimallocAllocator = MimallocAllocator {};
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> anyhow::Result<()> {
     println!("Program start");
     println!(
         "Lean toolchain version used to build the lean-sys crate: {}",
@@ -45,7 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             lean_io_result_show_error(res);
             lean_dec(res);
             // do not access Lean declarations if initialization failed
-            return Err("Lean module initialization failed".into());
+            anyhow::bail!("Lean module initialization failed");
         }
         lean_io_mark_end_initialization();
     }

@@ -1,12 +1,15 @@
-use std::env;
-use std::error::Error;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 
-use bindgen::builder;
+use bindgen::{BindgenError, builder};
 
 use crate::lake::{self, LakeEnvironmentDescriber};
+
+pub use crate::elan::EnvironmentError as ElanEnvironmentError;
+pub use crate::lake::EnvironmentError as LakeEnvironmentError;
+pub use crate::rust::LeanSysRootModuleGenerationError;
+pub use crate::{NotUnicodeString, OutDirError};
 
 pub struct OutputFilesConfig<'a> {
     /// The base of the native library that will be generated to contain functions
@@ -43,10 +46,44 @@ impl Default for OutputFilesConfig<'static> {
     }
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum BindingsGenerationError {
+    #[error(transparent)]
+    OutDir(#[from] OutDirError),
+    #[error("error generating bindings")]
+    Bindgen(#[from] BindgenError),
+    #[error("error creating file \"{}\"", .path.display())]
+    Create {
+        path: PathBuf,
+        source: std::io::Error,
+    },
+    #[error("error writing to file \"{}\"", .path.display())]
+    Write {
+        path: PathBuf,
+        source: std::io::Error,
+    },
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum BuildError {
+    #[error("error retrieving Lake environment")]
+    LakeEnvironmentError(#[from] LakeEnvironmentError),
+    #[error("error processing Elan environment")]
+    ElanEnvironment(#[from] ElanEnvironmentError),
+    #[error("invalid Lean include directory path")]
+    LeanIncludeDirectoryNotUnicode(#[source] NotUnicodeString),
+    #[error("invalid Lean header path")]
+    LeanHeaderPathNotUnicode(#[source] NotUnicodeString),
+    #[error("error creating Lean runtime Rust bindings")]
+    BindingsGenerationError(#[from] BindingsGenerationError),
+    #[error("error creating crate root module file")]
+    LeanSysRootModuleGeneration(#[from] LeanSysRootModuleGenerationError),
+}
+
 pub fn build<T: LakeEnvironmentDescriber>(
     lake_environment_describer: T,
     output_files_config: OutputFilesConfig,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<(), BuildError> {
     // Ensure the Lean toolchain is installed first
     let lake_environment = lake::get_lake_environment(&lake_environment_describer)?;
     let lean_library_directory = lake_environment.lean_library_directory();
@@ -73,27 +110,18 @@ pub fn build<T: LakeEnvironmentDescriber>(
     println!("cargo::rustc-link-lib=dylib=m");
 
     let lean_include_directory = lake_environment.lean_include_directory();
-    let lean_include_directory_str =
-        lean_include_directory
-            .to_str()
-            .ok_or_else(|| -> Box<dyn Error> {
-                format!(
-                    "Lean include directory path is not a valid UTF-8 string, \"{}\"",
-                    lean_include_directory.display()
-                )
-                .into()
-            })?;
-
-    let lean_header_path = lake_environment.lean_header_path();
-    let lean_header_path_str = lean_header_path.to_str().ok_or_else(|| -> Box<dyn Error> {
-        format!(
-            "Lean header path is not a valid UTF-8 string, \"{}\"",
-            lean_header_path.display()
-        )
-        .into()
+    let lean_include_directory_str = lean_include_directory.to_str().ok_or_else(|| {
+        BuildError::LeanIncludeDirectoryNotUnicode(NotUnicodeString(
+            lean_include_directory.clone().into(),
+        ))
     })?;
 
-    let out_dir = PathBuf::from(env::var("OUT_DIR")?);
+    let lean_header_path = lake_environment.lean_header_path();
+    let lean_header_path_str = lean_header_path.to_str().ok_or_else(|| {
+        BuildError::LeanHeaderPathNotUnicode(NotUnicodeString(lean_header_path.clone().into()))
+    })?;
+
+    let out_dir = crate::get_out_dir().map_err(BindingsGenerationError::OutDir)?;
 
     let inline_wrapper_functions_out_file = out_dir.join(format!(
         "{}.c",
@@ -113,25 +141,30 @@ pub fn build<T: LakeEnvironmentDescriber>(
         .use_core()
         .merge_extern_blocks(true)
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
-        .generate()?;
+        .generate()
+        .map_err(BindingsGenerationError::Bindgen)?;
 
     let bindings_out_filename = out_dir.join(output_files_config.lean_bindings_filename);
-    let mut bindings_out_file = File::create(&bindings_out_filename).map_err(|err| {
-        format!(
-            "failed to create Lean runtime Rust bindings file \"{}\": {}",
-            bindings_out_filename.display(),
-            err
-        )
-    })?;
+    let mut bindings_out_file =
+        File::create(&bindings_out_filename).map_err(|err| BindingsGenerationError::Create {
+            path: bindings_out_filename.clone(),
+            source: err,
+        })?;
     // Create a module to contain warning allow directives
-    writeln!(&mut bindings_out_file, "mod lean_sys {{")?;
-    crate::write_warning_allow_directives(&mut bindings_out_file)?;
-    bindings.write(Box::new(&bindings_out_file))?;
-    writeln!(
-        &mut bindings_out_file,
-        "}}
+    writeln!(&mut bindings_out_file, "mod lean_sys {{")
+        .and_then(|_| crate::write_warning_allow_directives(&mut bindings_out_file))
+        .and_then(|_| bindings.write(Box::new(&bindings_out_file)))
+        .and_then(|_| {
+            writeln!(
+                &mut bindings_out_file,
+                "}}
 pub use lean_sys::*;"
-    )?;
+            )
+        })
+        .map_err(|err| BindingsGenerationError::Write {
+            path: bindings_out_filename.clone(),
+            source: err,
+        })?;
 
     println!(
         "cargo::rustc-env=LEAN_RUST_BINDINGS={}",

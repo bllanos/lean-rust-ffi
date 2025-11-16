@@ -1,8 +1,70 @@
-use std::error::Error;
 use std::ffi::OsStr;
 use std::path::PathBuf;
 
-use super::{LakeEnvironmentDescriber, display_slice};
+use super::{LakeCommandError, LakeEnvironmentDescriber};
+use crate::{NotUnicodeBytes, NotUnicodeString, display_slice};
+
+#[derive(thiserror::Error, Debug)]
+#[error("not present")]
+pub struct NotPresent;
+
+#[derive(thiserror::Error, Debug)]
+pub enum EnvironmentVariableValueError {
+    #[error(transparent)]
+    NotPresent(#[from] NotPresent),
+    #[error(transparent)]
+    NotUnicode(#[from] NotUnicodeString),
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum LakeEnvEnvironmentVariableValueError {
+    #[error(transparent)]
+    NotPresent(#[from] NotPresent),
+    #[error(transparent)]
+    NotUnicodeBytes(NotUnicodeBytes),
+    #[error("environment line \"{}\" has the same name as a previous line", display_slice(.line))]
+    DuplicateName { line: Vec<u8> },
+}
+
+#[derive(thiserror::Error, Debug)]
+#[error("error obtaining environment variable \"{name}\" from `lake env` command output")]
+pub struct LakeEnvEnvironmentVariableError {
+    pub name: String,
+    pub source: LakeEnvEnvironmentVariableValueError,
+}
+
+#[derive(thiserror::Error, Debug)]
+#[error("error obtaining environment variable \"{name}\" from process environment variables")]
+pub struct EnvironmentVariableError {
+    pub name: String,
+    pub source: EnvironmentVariableValueError,
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum LakeEnvEnvironmentError {
+    #[error("no variable name in environment line \"{}\"", display_slice(.line))]
+    MissingName { line: Vec<u8> },
+    #[error("variable name is not valid UTF-8")]
+    NotUnicodeName { name: Vec<u8> },
+    #[error(transparent)]
+    VariableError(#[from] LakeEnvEnvironmentVariableError),
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum LakeEnvError {
+    #[error(transparent)]
+    Command(#[from] LakeCommandError),
+    #[error(transparent)]
+    Environment(#[from] LakeEnvEnvironmentError),
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum EnvironmentError {
+    #[error(transparent)]
+    LakeEnv(#[from] LakeEnvError),
+    #[error(transparent)]
+    ProcessEnvironment(#[from] EnvironmentVariableError),
+}
 
 pub struct LakeEnv {
     elan_toolchain: String,
@@ -15,81 +77,96 @@ impl LakeEnv {
     const LEAN_GITHASH: &str = "LEAN_GITHASH";
     const LEAN_SYSROOT: &str = "LEAN_SYSROOT";
 
-    fn from_posix_env(env: &[u8]) -> Result<Self, Box<dyn Error>> {
+    fn from_posix_env(env: &[u8]) -> Result<Self, LakeEnvEnvironmentError> {
         let tuple = env.split(|c| c.is_ascii_control()).try_fold(
             (String::new(), String::new(), PathBuf::new()),
-            |accumulator, slice| -> Result<(String, String, PathBuf), Box<dyn Error>> {
+            |accumulator, slice| -> Result<(String, String, PathBuf), LakeEnvEnvironmentError> {
                 let mut parts = slice.splitn(2, |c| *c == b'=');
-                let var = parts.next().ok_or_else(|| {
-                    format!(
-                        "no variable name in environment line \"{}\"",
-                        display_slice(slice)
-                    )
-                })?;
+                let var = parts
+                    .next()
+                    .ok_or_else(|| LakeEnvEnvironmentError::MissingName { line: slice.into() })?;
                 match parts.next() {
                     None => Ok(accumulator),
                     Some(value) => {
-                        let var_str = str::from_utf8(var)?;
-                        match var_str {
-                            Self::ELAN_TOOLCHAIN => {
-                                let value_str = str::from_utf8(value)?;
-                                if accumulator.0.is_empty() {
-                                    Ok((String::from(value_str), accumulator.1, accumulator.2))
-                                } else {
-                                    Err(format!(
-                                        "duplicate {} variable in environment string",
-                                        Self::ELAN_TOOLCHAIN
+                        let var_str = str::from_utf8(var).map_err(|_| {
+                            LakeEnvEnvironmentError::NotUnicodeName { name: var.into() }
+                        })?;
+                        (match var_str {
+                            Self::ELAN_TOOLCHAIN => str::from_utf8(value)
+                                .map_err(|_| {
+                                    LakeEnvEnvironmentVariableValueError::NotUnicodeBytes(
+                                        NotUnicodeBytes(value.into()),
                                     )
-                                    .into())
-                                }
-                            }
-                            Self::LEAN_GITHASH => {
-                                let value_str = str::from_utf8(value)?;
-                                if accumulator.1.is_empty() {
-                                    Ok((accumulator.0, String::from(value_str), accumulator.2))
-                                } else {
-                                    Err(format!(
-                                        "duplicate {} variable in environment string",
-                                        Self::LEAN_GITHASH
+                                })
+                                .and_then(|value_str| {
+                                    if accumulator.0.is_empty() {
+                                        Ok((String::from(value_str), accumulator.1, accumulator.2))
+                                    } else {
+                                        Err(LakeEnvEnvironmentVariableValueError::DuplicateName {
+                                            line: slice.into(),
+                                        })
+                                    }
+                                }),
+                            Self::LEAN_GITHASH => str::from_utf8(value)
+                                .map_err(|_| {
+                                    LakeEnvEnvironmentVariableValueError::NotUnicodeBytes(
+                                        NotUnicodeBytes(value.into()),
                                     )
-                                    .into())
-                                }
-                            }
-                            Self::LEAN_SYSROOT => {
-                                let value_str = str::from_utf8(value)?;
-                                if accumulator.2.as_os_str().is_empty() {
-                                    Ok((accumulator.0, accumulator.1, PathBuf::from(value_str)))
-                                } else {
-                                    Err(format!(
-                                        "duplicate {} variable in environment string",
-                                        Self::LEAN_SYSROOT
+                                })
+                                .and_then(|value_str| {
+                                    if accumulator.1.is_empty() {
+                                        Ok((accumulator.0, String::from(value_str), accumulator.2))
+                                    } else {
+                                        Err(LakeEnvEnvironmentVariableValueError::DuplicateName {
+                                            line: slice.into(),
+                                        })
+                                    }
+                                }),
+                            Self::LEAN_SYSROOT => str::from_utf8(value)
+                                .map_err(|_| {
+                                    LakeEnvEnvironmentVariableValueError::NotUnicodeBytes(
+                                        NotUnicodeBytes(value.into()),
                                     )
-                                    .into())
-                                }
-                            }
+                                })
+                                .and_then(|value_str| {
+                                    if accumulator.2.as_os_str().is_empty() {
+                                        Ok((accumulator.0, accumulator.1, PathBuf::from(value_str)))
+                                    } else {
+                                        Err(LakeEnvEnvironmentVariableValueError::DuplicateName {
+                                            line: slice.into(),
+                                        })
+                                    }
+                                }),
                             _ => Ok(accumulator),
-                        }
+                        })
+                        .map_err(|error| {
+                            LakeEnvEnvironmentVariableError {
+                                name: var_str.into(),
+                                source: error,
+                            }
+                            .into()
+                        })
                     }
                 }
             },
         )?;
         if tuple.0.is_empty() {
-            Err(format!(
-                "missing {} variable in environment string",
-                Self::ELAN_TOOLCHAIN
-            )
+            Err(LakeEnvEnvironmentVariableError {
+                name: Self::ELAN_TOOLCHAIN.into(),
+                source: NotPresent.into(),
+            }
             .into())
         } else if tuple.1.is_empty() {
-            Err(format!(
-                "missing {} variable in environment string",
-                Self::LEAN_GITHASH
-            )
+            Err(LakeEnvEnvironmentVariableError {
+                name: Self::LEAN_GITHASH.into(),
+                source: NotPresent.into(),
+            }
             .into())
         } else if tuple.2.as_os_str().is_empty() {
-            Err(format!(
-                "missing {} variable in environment string",
-                Self::LEAN_SYSROOT
-            )
+            Err(LakeEnvEnvironmentVariableError {
+                name: Self::LEAN_SYSROOT.into(),
+                source: NotPresent.into(),
+            }
             .into())
         } else {
             Ok(Self {
@@ -159,9 +236,12 @@ impl LakeEnv {
 /// then Elan will install the Lean toolchain if it is missing.
 pub fn get_lake_environment<T: LakeEnvironmentDescriber>(
     lake_environment_describer: T,
-) -> Result<LakeEnv, Box<dyn Error>> {
+) -> Result<LakeEnv, EnvironmentError> {
     let lake_executable_path = lake_environment_describer.get_lake_executable_path();
     let args = [OsStr::new("env")];
-    let stdout = super::run_lake_command_and_retrieve_stdout(lake_executable_path, &args)?;
-    LakeEnv::from_posix_env(&stdout)
+    let stdout = super::run_lake_command_and_retrieve_stdout(lake_executable_path, &args)
+        .map_err(|error| EnvironmentError::LakeEnv(error.into()))?;
+    let lake_env = LakeEnv::from_posix_env(&stdout)
+        .map_err(|error| EnvironmentError::LakeEnv(error.into()))?;
+    Ok(lake_env)
 }

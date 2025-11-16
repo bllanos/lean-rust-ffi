@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+anyhow = { workspace = true }
 lean = { path = "../../../../lean" }
 lean-sys = { path = "../../../../lean_sys" }
 map-array = { path = "../map_array" }

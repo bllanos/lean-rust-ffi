@@ -1,8 +1,6 @@
 #![forbid(unsafe_code)]
 
-use std::error::Error;
-
-use lean::{MimallocAllocator, MinimalComponents, Runtime};
+use lean::{LeanError, LeanIoError, MimallocAllocator, MinimalComponents, Runtime};
 use map_array::{MapArrayModuleInitializer, MapOptions};
 
 #[global_allocator]
@@ -12,7 +10,8 @@ static ALLOCATOR: MimallocAllocator = MimallocAllocator {};
 /// memory allocation in Rust and exercises functions from the Lean `MapArray`
 /// module.
 #[test]
-fn map_array_custom_allocator() -> Result<(), Box<dyn Error>> {
+fn map_array_custom_allocator() -> Result<(), LeanError<LeanIoError, <u8 as TryFrom<usize>>::Error>>
+{
     lean::run_in_lean_runtime_with_default_error_handler(
         |runtime: &Runtime<MinimalComponents, MapArrayModuleInitializer>| {
             let addend: i32 = 2;
@@ -32,8 +31,7 @@ fn map_array_custom_allocator() -> Result<(), Box<dyn Error>> {
             let expected_data = [6_i32, 21, 36, 51, 66, 81];
             assert!(expected_data.into_iter().eq(array_out.iter()));
 
-            Ok::<_, <u8 as TryFrom<usize>>::Error>(())
+            Ok(())
         },
-    )?;
-    Ok(())
+    )
 }

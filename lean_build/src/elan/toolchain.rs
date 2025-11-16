@@ -1,6 +1,6 @@
-use std::error::Error;
 use std::fmt;
 
+use super::ToolchainResolutionError;
 use crate::elan_fork::elan::{Cfg as ElanCfg, OverrideReason, Toolchain};
 use crate::elan_fork::elan_dist::dist::ToolchainDesc;
 
@@ -19,8 +19,10 @@ pub enum LeanToolchainVersion {
 impl LeanToolchainVersion {
     pub fn from_elan_environment(
         elan_cfg: &ElanCfg,
-    ) -> Result<(Self, Option<OverrideReason>), Box<dyn Error>> {
-        let (toolchain, override_reason) = elan_cfg.toolchain_for_current_directory()?;
+    ) -> Result<(Self, Option<OverrideReason>), ToolchainResolutionError> {
+        let (toolchain, override_reason) = elan_cfg
+            .toolchain_for_current_directory()
+            .map_err(ToolchainResolutionError::from_elan_error)?;
         Ok((toolchain.into(), override_reason))
     }
 

@@ -2,9 +2,10 @@ use std::cmp::Ordering;
 use std::error::Error;
 use std::ffi::OsStr;
 use std::fs::DirEntry;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use super::LakeLibraryDescription;
+use crate::NotUnicode;
 
 struct CFile {
     module_name: String,
@@ -185,58 +186,103 @@ impl LakeBuildOutputTraverser for LakeBuildOutput {
     }
 }
 
-fn create_module_name(s: &str) -> Result<String, Box<dyn Error>> {
+#[derive(thiserror::Error, Debug)]
+pub enum LakeBuildOutputProcessingError {
+    #[error("\"{0}\" does not contain any allowed characters")]
+    EmptyConversion(String),
+    #[error("no file stem")]
+    MissingFileStem,
+    #[error("no file name")]
+    MissingFileName,
+    #[error(transparent)]
+    NotUnicode(#[from] NotUnicode),
+    #[error("error listing directory")]
+    ReadDir(#[source] std::io::Error),
+    #[error("error reading directory entry")]
+    ReadDirEntry(#[source] std::io::Error),
+    #[error("error retrieving file type")]
+    FileType(#[source] std::io::Error),
+}
+
+#[derive(thiserror::Error, Debug)]
+#[error("path \"{}\" could not be converted to a Rust module hierarchy", path.display())]
+pub struct ModuleNameCreationError {
+    pub path: PathBuf,
+    pub source: LakeBuildOutputProcessingError,
+}
+
+fn create_module_name(s: &str) -> Result<String, LakeBuildOutputProcessingError> {
     let module_name: String = s
         .chars()
         .filter(|c| c == &'_' || c.is_ascii_alphanumeric())
         .collect();
     if module_name.is_empty() {
-        Err(format!("\"{s}\" could not be converted to a valid module name",).into())
+        Err(LakeBuildOutputProcessingError::EmptyConversion(s.into()))
     } else {
         Ok(module_name)
     }
 }
 
 impl LakeBuildOutput {
-    fn find_children<P: AsRef<Path>>(directory: P) -> Result<Vec<LakeBuildOutput>, Box<dyn Error>> {
+    fn find_children<P: AsRef<Path>>(directory: P) -> Result<Vec<Self>, ModuleNameCreationError> {
         let mut children = directory
             .as_ref()
-            .read_dir()?
+            .read_dir()
+            .map_err(|error| ModuleNameCreationError {
+                path: directory.as_ref().to_path_buf(),
+                source: LakeBuildOutputProcessingError::ReadDir(error),
+            })?
             .filter_map(|result| match result {
                 Ok(entry) => match Self::convert_dir_entry(entry) {
                     Ok(option) => option.map(Ok),
                     Err(e) => Some(Err(e)),
                 },
-                Err(e) => Some(Err(e.into())),
+                Err(e) => Some(Err(ModuleNameCreationError {
+                    path: directory.as_ref().to_path_buf(),
+                    source: LakeBuildOutputProcessingError::ReadDirEntry(e),
+                })),
             })
-            .collect::<Result<Vec<LakeBuildOutput>, _>>()?;
+            .collect::<Result<Vec<Self>, _>>()?;
         children.sort();
         Ok(children)
     }
 
-    fn convert_dir_entry(value: DirEntry) -> Result<Option<Self>, Box<dyn Error>> {
-        let file_type = value.file_type()?;
+    fn convert_dir_entry(value: DirEntry) -> Result<Option<Self>, ModuleNameCreationError> {
+        let file_type = value.file_type().map_err(|error| ModuleNameCreationError {
+            path: value.path(),
+            source: LakeBuildOutputProcessingError::FileType(error),
+        })?;
         if file_type.is_file() {
             let path = value.path();
             if path.extension() == Some(OsStr::new("c")) {
                 let stem = String::from_utf8(
                     path.file_stem()
-                        .ok_or_else(|| format!("no file stem found in \"{}\"", path.display()))?
+                        .ok_or_else(|| ModuleNameCreationError {
+                            path: path.clone(),
+                            source: LakeBuildOutputProcessingError::MissingFileStem,
+                        })?
                         .as_encoded_bytes()
                         .to_vec(),
                 )
-                .map_err(|_| format!("file path \"{}\" is not valid UTF-8", path.display()))?;
-                let module_name = format!("{}_c", create_module_name(&stem)?);
+                .map_err(|_| ModuleNameCreationError {
+                    path: path.clone(),
+                    source: NotUnicode.into(),
+                })?;
+                let module_name = format!(
+                    "{}_c",
+                    create_module_name(&stem).map_err(|error| ModuleNameCreationError {
+                        path: path.clone(),
+                        source: error,
+                    })?
+                );
 
                 let path_str = String::from_utf8(path.into_os_string().into_encoded_bytes())
-                    .map_err(|err| {
-                        format!(
-                            "file path \"{}\" is not valid UTF-8",
-                            Path::new(unsafe {
-                                OsStr::from_encoded_bytes_unchecked(err.as_bytes())
-                            })
-                            .display()
-                        )
+                    .map_err(|err| ModuleNameCreationError {
+                        path: Path::new(unsafe {
+                            OsStr::from_encoded_bytes_unchecked(err.as_bytes())
+                        })
+                        .into(),
+                        source: NotUnicode.into(),
                     })?;
                 Ok(Some(Self::CFile(CFile {
                     path: path_str,
@@ -253,12 +299,22 @@ impl LakeBuildOutput {
             } else {
                 let name = String::from_utf8(
                     path.file_name()
-                        .ok_or_else(|| format!("no file name found in \"{}\"", path.display()))?
+                        .ok_or_else(|| ModuleNameCreationError {
+                            path: path.clone(),
+                            source: LakeBuildOutputProcessingError::MissingFileName,
+                        })?
                         .as_encoded_bytes()
                         .to_vec(),
                 )
-                .map_err(|_| format!("directory path \"{}\" is not valid UTF-8", path.display()))?;
-                let module_name = create_module_name(&name)?;
+                .map_err(|_| ModuleNameCreationError {
+                    path: path.clone(),
+                    source: NotUnicode.into(),
+                })?;
+                let module_name =
+                    create_module_name(&name).map_err(|error| ModuleNameCreationError {
+                        path,
+                        source: error,
+                    })?;
                 Ok(Some(Self::Directory(Directory {
                     children,
                     module_name,
@@ -269,7 +325,7 @@ impl LakeBuildOutput {
         }
     }
 
-    fn traverse_path<P: AsRef<Path>>(base_path: P) -> Result<Self, Box<dyn Error>> {
+    fn traverse_path<P: AsRef<Path>>(base_path: P) -> Result<Self, ModuleNameCreationError> {
         let children = Self::find_children(base_path)?;
         Ok(Self::Directory(Directory {
             children,
@@ -280,6 +336,6 @@ impl LakeBuildOutput {
 
 pub fn find_c_files<P: AsRef<Path>, Q: AsRef<OsStr>, R: AsRef<Path>, S: AsRef<Path>>(
     lake_library_description: &LakeLibraryDescription<P, Q, R, S>,
-) -> Result<impl LakeBuildOutputTraverser, Box<dyn Error>> {
+) -> Result<impl LakeBuildOutputTraverser, ModuleNameCreationError> {
     LakeBuildOutput::traverse_path(lake_library_description.get_c_files_directory())
 }

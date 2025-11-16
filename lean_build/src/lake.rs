@@ -1,17 +1,16 @@
-use std::error::Error;
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, ExitStatus};
+
+use crate::{NotUnicodeBytes, display_slice};
 
 mod env;
 mod package;
 
-pub use env::get_lake_environment;
-pub use package::{LakeBuildOutputTraversalEvent, LakeBuildOutputTraverser, find_c_files};
-
-fn display_slice(slice: &[u8]) -> &str {
-    str::from_utf8(slice).unwrap_or("[Non-UTF8]")
-}
+pub use env::{EnvironmentError, get_lake_environment};
+pub use package::{
+    LakeBuildOutputTraversalEvent, LakeBuildOutputTraverser, ModuleNameCreationError, find_c_files,
+};
 
 fn get_lake_executable_path(lake_executable_path: Option<&OsStr>) -> &OsStr {
     match lake_executable_path {
@@ -102,39 +101,65 @@ impl<'a, P: AsRef<Path>, Q: AsRef<OsStr>, R: AsRef<Path>, S: AsRef<Path>>
     }
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum LakeCommandExecutionError {
+    #[error("failed to start command")]
+    Start(#[from] std::io::Error),
+    #[error(
+        "run with arguments {args:?} failed with status {status}, stdout: {}, stderr: {}",
+        display_slice(.stdout),
+        display_slice(.stderr),
+    )]
+    Run {
+        args: Vec<OsString>,
+        status: ExitStatus,
+        stdout: Vec<u8>,
+        stderr: Vec<u8>,
+    },
+}
+
+#[derive(thiserror::Error, Debug)]
+#[error("failed to invoke Lake executable (path \"{}\")", .lake_executable_path.as_os_str().display())]
+pub struct LakeCommandError {
+    pub lake_executable_path: OsString,
+    pub source: LakeCommandExecutionError,
+}
+
 fn run_lake_command_and_retrieve_stdout<'a, P: AsRef<OsStr>>(
     lake_executable_path: P,
     args: &'a [&'a OsStr],
-) -> Result<Vec<u8>, Box<dyn Error>> {
+) -> Result<Vec<u8>, LakeCommandError> {
     let output = Command::new(&lake_executable_path)
         .args(args)
         .output()
-        .map_err(|err| {
-            format!(
-                "Failed to invoke Lake executable with path \"{}\", error: {err}",
-                display_slice(lake_executable_path.as_ref().as_encoded_bytes()),
-            )
+        .map_err(|err| LakeCommandError {
+            lake_executable_path: lake_executable_path.as_ref().into(),
+            source: err.into(),
         })?;
     if output.status.success() {
         Ok(output.stdout)
     } else {
-        Err(format!(
-            "Lake invocation (path \"{}\") with arguments {args:?} failed with status {}, stdout:{}, stderr: {}",
-            display_slice(lake_executable_path.as_ref().as_encoded_bytes()),
-            output.status,
-            display_slice(&output.stdout),
-            display_slice(&output.stderr),
-        )
-        .into())
+        Err(LakeCommandError {
+            lake_executable_path: lake_executable_path.as_ref().into(),
+            source: LakeCommandExecutionError::Run {
+                args: args.iter().map(|&s| s.to_os_string()).collect(),
+                status: output.status,
+                stdout: output.stdout,
+                stderr: output.stderr,
+            },
+        })
     }
 }
 
+#[derive(thiserror::Error, Debug)]
+#[error("invalid Lake query output")]
+pub struct InvalidLakeQueryOutputError(#[from] NotUnicodeBytes);
+
 /// Assumes there is only a single target path
 fn get_lake_target_path_from_lake_query_output(
-    lean_build_output: &[u8],
-) -> Result<PathBuf, Box<dyn Error>> {
-    let output_str = str::from_utf8(lean_build_output)
-        .map_err(|err| format!("Lake query output is not valid UTF8: {err}"))?;
+    output: &[u8],
+) -> Result<PathBuf, InvalidLakeQueryOutputError> {
+    let output_str = str::from_utf8(output).map_err(|_| NotUnicodeBytes(output.into()))?;
     Ok(Path::new(output_str).to_path_buf())
 }
 
@@ -152,6 +177,14 @@ fn rerun_build_if_lake_package_changes<
     );
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum LakeLibraryBuildError {
+    #[error(transparent)]
+    InvalidLakeQueryOutput(#[from] InvalidLakeQueryOutputError),
+    #[error(transparent)]
+    LakeCommand(#[from] LakeCommandError),
+}
+
 pub fn build_and_link_static_lean_library<
     P: AsRef<Path>,
     Q: AsRef<OsStr>,
@@ -159,7 +192,7 @@ pub fn build_and_link_static_lean_library<
     S: AsRef<Path>,
 >(
     lake_library_description: &LakeLibraryDescription<P, Q, R, S>,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<(), LakeLibraryBuildError> {
     let lake_package_path = lake_library_description.get_lake_package_path();
     let build_target = format!("@/{}:static", lake_library_description.target_name);
     let args = [

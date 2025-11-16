@@ -9,14 +9,13 @@ mod toolchain;
 
 use toolchain::LeanToolchainVersion;
 
-fn create_elan_cfg() -> Result<ElanCfg, Box<dyn Error>> {
-    Ok(ElanCfg::from_env(Arc::new(
-        move |n: Notification<'_>| match n.level() {
-            NotificationLevel::Warn => {
-                println!("cargo::warning={n}");
-            }
-        },
-    ))?)
+fn create_elan_cfg() -> Result<ElanCfg, ToolchainResolutionError> {
+    ElanCfg::from_env(Arc::new(move |n: Notification<'_>| match n.level() {
+        NotificationLevel::Warn => {
+            println!("cargo::warning={n}");
+        }
+    }))
+    .map_err(ToolchainResolutionError::from_elan_error)
 }
 
 fn rerun_build_if_elan_environment_variables_change() {
@@ -30,18 +29,28 @@ fn rerun_build_if_elan_settings_change(elan_cfg: &ElanCfg) {
     );
 }
 
+#[derive(thiserror::Error, Debug)]
+#[error("unexpected toolchain override reason: {override_reason}")]
+pub struct UnexpectedToolchainOverrideReasonError {
+    pub override_reason: OverrideReason,
+}
+
+impl From<OverrideReason> for UnexpectedToolchainOverrideReasonError {
+    fn from(override_reason: OverrideReason) -> Self {
+        Self { override_reason }
+    }
+}
+
 fn rerun_build_if_lean_toolchain_override_changes(
     elan_cfg: &ElanCfg,
     override_reason: &OverrideReason,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<(), UnexpectedToolchainOverrideReasonError> {
     match override_reason {
         OverrideReason::Environment => {
             rerun_build_if_elan_environment_variables_change();
             Ok(())
         }
-        OverrideReason::InToolchainDirectory(_) => {
-            Err(format!("unexpected toolchain override_reason reason: {override_reason}").into())
-        }
+        OverrideReason::InToolchainDirectory(_) => Err(override_reason.clone().into()),
         OverrideReason::LeanpkgFile(path) => {
             println!("cargo::rerun-if-changed={}", path.display());
             Ok(())
@@ -57,7 +66,25 @@ fn rerun_build_if_lean_toolchain_override_changes(
     }
 }
 
-pub fn rerun_build_if_lean_version_changes() -> Result<(), Box<dyn Error>> {
+#[derive(thiserror::Error, Debug)]
+#[error("error resolving Lean toolchain")]
+pub struct ToolchainResolutionError(#[source] pub Box<dyn Error + Send + Sync + 'static>);
+
+impl ToolchainResolutionError {
+    fn from_elan_error(error: crate::elan_fork::elan::Error) -> Self {
+        Self(Box::new(error) as Box<dyn Error + Send + Sync + 'static>)
+    }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum EnvironmentError {
+    #[error(transparent)]
+    ToolchainResolution(#[from] ToolchainResolutionError),
+    #[error(transparent)]
+    UnexpectedToolchainOverrideReason(#[from] UnexpectedToolchainOverrideReasonError),
+}
+
+pub fn rerun_build_if_lean_version_changes() -> Result<(), EnvironmentError> {
     rerun_build_if_elan_environment_variables_change();
     let elan_cfg = create_elan_cfg()?;
     rerun_build_if_elan_settings_change(&elan_cfg);

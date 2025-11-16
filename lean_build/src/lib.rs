@@ -2,12 +2,19 @@ use std::io::Write;
 
 mod elan;
 mod elan_fork;
+mod file;
 mod lake;
 pub mod library_build;
 pub mod runtime_build;
 mod rust;
+mod unicode;
 
+use file::get_out_dir;
+use unicode::display_slice;
+
+pub use file::{FileOutputError, OutDirError};
 pub use lake::{LakeEnvironmentDescriber, LakeEnvironmentDescription};
+pub use unicode::{NotUnicode, NotUnicodeBytes, NotUnicodeString};
 
 /// The environment variable used to specify the Lean toolchain
 const ELAN_TOOLCHAIN: &str = "ELAN_TOOLCHAIN";

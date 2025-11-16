@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::ffi::CStr;
 use std::slice;
 
@@ -21,7 +20,7 @@ static ALLOCATOR: MimallocAllocator = MimallocAllocator {};
 /// memory allocation in Rust and exercises functions from the Lean `MapArray`
 /// module.
 #[test]
-fn map_array_custom_allocator() -> Result<(), Box<dyn Error>> {
+fn map_array_custom_allocator() -> anyhow::Result<()> {
     unsafe {
         // Lean initialization
         // -------------------
@@ -43,7 +42,7 @@ fn map_array_custom_allocator() -> Result<(), Box<dyn Error>> {
             lean_io_result_show_error(res);
             lean_dec(res);
             // do not access Lean declarations if initialization failed
-            return Err("Lean module initialization failed".into());
+            anyhow::bail!("Lean module initialization failed");
         }
         lean_io_mark_end_initialization();
     }
