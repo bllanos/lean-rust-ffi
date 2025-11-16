@@ -3,12 +3,15 @@ use std::sync::Once;
 
 use lean_sys::{b_lean_obj_arg, lean_dec, lean_io_result_get_error};
 
-mod types;
-
 use crate::{LeanError, LeanIoError, Modules, RuntimeComponents};
-pub use types::{
-    LeanPackage, LeanPackageComponents, Minimal, MinimalComponents, Runtime, RuntimeInitializer,
-};
+
+mod components;
+mod handle;
+mod initialization;
+
+pub use components::{LeanPackage, LeanPackageComponents, Minimal, MinimalComponents};
+pub use handle::Runtime;
+pub use initialization::RuntimeInitializer;
 
 static ONCE_INITIALIZATION_GUARD: Once = Once::new();
 

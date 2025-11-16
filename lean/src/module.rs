@@ -5,7 +5,7 @@ use lean_sys::{
     lean_obj_res, lean_object,
 };
 
-use crate::{Modules, Runtime, RuntimeComponents, util::NonSendNonSync};
+use crate::{Modules, Runtime, RuntimeComponents, sync::NonSendNonSync};
 
 pub enum NoModules {}
 

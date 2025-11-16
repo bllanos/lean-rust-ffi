@@ -15,8 +15,8 @@ mod error;
 pub mod lean_types;
 mod module;
 mod runtime;
+mod sync;
 mod thread;
-mod util;
 
 use module::ModulesInitializer;
 
