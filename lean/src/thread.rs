@@ -4,18 +4,13 @@ use lean_sys::{lean_finalize_thread, lean_initialize_thread};
 
 use crate::{Modules, Runtime, RuntimeComponents};
 
-fn run_lean_thread<
-    R: RuntimeComponents,
-    M: Modules,
-    T,
-    Run: FnOnce(&Runtime<R, M>) -> T,
->(
+fn run_lean_thread<R: RuntimeComponents, M: Modules, T, Run: FnOnce(&Runtime<R, M>) -> T>(
     run: Run,
 ) -> T {
     unsafe {
         lean_initialize_thread();
     }
-    let runtime = Runtime::new();
+    let runtime = Runtime::new_secondary_thread();
     let output = run(&runtime);
     unsafe {
         lean_finalize_thread();

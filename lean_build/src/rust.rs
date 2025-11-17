@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use crate::FileOutputError;
 
-const LEAN_SYS_ROOT_MODULE: &[u8; 565] = include_bytes!("lean_sys_root_module.rs");
+const LEAN_SYS_ROOT_MODULE: &[u8; 721] = include_bytes!("lean_sys_root_module.rs");
 
 #[derive(thiserror::Error, Debug)]
 #[error("error generating file \"{}\"", .path.display())]

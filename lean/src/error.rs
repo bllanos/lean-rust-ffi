@@ -49,7 +49,13 @@ impl LeanIoError {
 }
 
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
-pub enum LeanError<ModulesInitializationError: Error, RunError: Error> {
+pub enum LeanError<
+    RuntimeInitializationError: Error,
+    ModulesInitializationError: Error,
+    RunError: Error,
+> {
+    #[error("Lean runtime initialization error")]
+    RuntimeInitialization(#[source] RuntimeInitializationError),
     #[error("Lean modules initialization error")]
     ModulesInitialization(#[source] ModulesInitializationError),
     #[error(transparent)]

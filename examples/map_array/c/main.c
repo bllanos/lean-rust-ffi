@@ -1,21 +1,25 @@
 #include <stdio.h>
 #include <lean/lean.h>
 
+extern char ** lean_setup_args(int argc, char ** argv);
 extern void lean_initialize_runtime_module();
 // This would replace `lean_initialize_runtime_module()` if the code accesses the `Lean` package
 // extern void lean_initialize();
 extern void lean_io_mark_end_initialization();
+extern void lean_init_task_manager();
+extern void lean_finalize_task_manager();
 
 extern lean_object* initialize_MapArray(uint8_t builtin, lean_object *w);
 extern lean_object* mk_map_options(uint32_t addend, uint32_t multiplicand);
 extern lean_object* map_options_to_string(lean_object*);
 extern lean_object* my_map(lean_object *options, lean_object *arr);
 
-int main() {
+int main(int argc, char ** argv) {
   printf("Program start\n");
 
   // Lean initialization
   // -------------------
+  argv = lean_setup_args(argc, argv);
   lean_initialize_runtime_module();
 
   // Lean module initialization
@@ -33,6 +37,7 @@ int main() {
       return 1;  // do not access Lean declarations if initialization failed
   }
   lean_io_mark_end_initialization();
+  lean_init_task_manager();
 
   // Program logic
   // -------------
@@ -79,6 +84,10 @@ int main() {
   printf("]\n");
 
   lean_dec_ref(arr_out);
+
+  // Lean cleanup
+  // --------------------
+  lean_finalize_task_manager();
 
   printf("Program end\n");
 }

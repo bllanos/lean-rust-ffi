@@ -1,3 +1,5 @@
+use std::error::Error;
+
 pub use lean_sys::{ELAN_TOOLCHAIN, LEAN_GITHASH, lean_obj_arg, lean_obj_res};
 
 // Re-export #[derive(Modules)]
@@ -24,8 +26,9 @@ pub use alloc::MimallocAllocator;
 pub use error::{LeanError, LeanIoError};
 pub use module::NoModules;
 pub use runtime::{
-    LeanPackage, LeanPackageComponents, Minimal, MinimalComponents, Runtime, run_in_lean_runtime,
-    run_in_lean_runtime_unchecked, run_in_lean_runtime_with_default_error_handler,
+    ArgcError, LeanPackage, LeanPackageComponents, Minimal, MinimalComponents, Runtime,
+    RuntimeInitializationError, run_in_lean_runtime, run_in_lean_runtime_unchecked,
+    run_in_lean_runtime_with_default_error_handler,
     run_in_lean_runtime_with_default_error_handler_unchecked,
 };
 pub use thread::{
@@ -46,12 +49,14 @@ pub use thread::{
 /// Implementations of this trait must guarantee that the Lean runtime is
 /// properly initialized.
 pub unsafe trait RuntimeComponents {
+    type InitializationError: Error;
+
     /// Initialize the Lean runtime
     ///
     /// # Safety
     ///
     /// Callers must ensure that the Lean runtime is initialized at most once.
-    unsafe fn initialize_runtime();
+    unsafe fn initialize_runtime() -> Result<(), Self::InitializationError>;
 
     /// Mark the end of the initialization phase
     ///
@@ -62,6 +67,14 @@ pub unsafe trait RuntimeComponents {
     ///
     /// This function must not be called more than once.
     unsafe fn mark_end_initialization();
+
+    /// Finalize the Lean runtime
+    ///
+    /// # Safety
+    ///
+    /// Callers must ensure that the Lean runtime has been previously
+    /// initialized and is finalized at most once
+    unsafe fn finalize_runtime();
 }
 
 /// A trait to be implemented by types that initialize one or more Lean modules

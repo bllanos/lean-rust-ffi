@@ -51,6 +51,6 @@ impl<R: RuntimeComponents, M: Modules> ModulesInitializer<R, M> {
         unsafe {
             R::mark_end_initialization();
         }
-        Runtime::new()
+        Runtime::new_main_thread()
     }
 }

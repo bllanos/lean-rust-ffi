@@ -9,7 +9,10 @@ mod components;
 mod handle;
 mod initialization;
 
-pub use components::{LeanPackage, LeanPackageComponents, Minimal, MinimalComponents};
+pub use components::{
+    ArgcError, LeanPackage, LeanPackageComponents, Minimal, MinimalComponents,
+    RuntimeInitializationError,
+};
 pub use handle::Runtime;
 pub use initialization::RuntimeInitializer;
 
@@ -33,8 +36,12 @@ pub unsafe fn run_in_lean_runtime_unchecked<
 >(
     modules_initialization_error_handler: ModulesInitializationErrorHandler,
     run: Run,
-) -> Result<T, LeanError<ModulesInitializationError, RunError>> {
-    let runtime_initializer = RuntimeInitializer::new();
+) -> Result<
+    T,
+    LeanError<<R as RuntimeComponents>::InitializationError, ModulesInitializationError, RunError>,
+> {
+    let runtime_initializer =
+        RuntimeInitializer::new().map_err(LeanError::RuntimeInitialization)?;
     match runtime_initializer.initialize_modules() {
         Ok(modules_initializer) => {
             let runtime = modules_initializer.mark_end_initialization();
@@ -70,7 +77,7 @@ pub fn run_in_lean_runtime_with_default_error_handler_unchecked<
     Run: FnOnce(&Runtime<R, M>) -> Result<T, RunError>,
 >(
     run: Run,
-) -> Result<T, LeanError<LeanIoError, RunError>> {
+) -> Result<T, LeanError<<R as RuntimeComponents>::InitializationError, LeanIoError, RunError>> {
     unsafe {
         run_in_lean_runtime_unchecked(
             |lean_io_error| LeanIoError::from_lean_io_error(lean_io_error),
@@ -102,7 +109,10 @@ pub fn run_in_lean_runtime<
 >(
     modules_initialization_error_handler: ModulesInitializationErrorHandler,
     run: Run,
-) -> Result<T, LeanError<ModulesInitializationError, RunError>> {
+) -> Result<
+    T,
+    LeanError<<R as RuntimeComponents>::InitializationError, ModulesInitializationError, RunError>,
+> {
     let mut result = None;
     ONCE_INITIALIZATION_GUARD.call_once(|| {
         result = Some(unsafe {
@@ -136,7 +146,7 @@ pub fn run_in_lean_runtime_with_default_error_handler<
     Run: FnOnce(&Runtime<R, M>) -> Result<T, RunError>,
 >(
     run: Run,
-) -> Result<T, LeanError<LeanIoError, RunError>> {
+) -> Result<T, LeanError<<R as RuntimeComponents>::InitializationError, LeanIoError, RunError>> {
     run_in_lean_runtime(
         |lean_io_error| unsafe { LeanIoError::from_lean_io_error(lean_io_error) },
         run,

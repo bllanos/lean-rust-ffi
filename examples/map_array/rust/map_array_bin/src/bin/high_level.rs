@@ -1,13 +1,17 @@
 #![forbid(unsafe_code)]
 
-use lean::{LeanError, LeanIoError, MimallocAllocator, MinimalComponents, Runtime};
+use lean::{
+    LeanError, LeanIoError, MimallocAllocator, MinimalComponents, Runtime,
+    RuntimeInitializationError,
+};
 use lean_sys::ELAN_TOOLCHAIN;
 use map_array::{MapArrayModuleInitializer, MapOptions};
 
 #[global_allocator]
 static ALLOCATOR: MimallocAllocator = MimallocAllocator {};
 
-fn main() -> Result<(), LeanError<LeanIoError, <u8 as TryFrom<usize>>::Error>> {
+fn main()
+-> Result<(), LeanError<RuntimeInitializationError, LeanIoError, <u8 as TryFrom<usize>>::Error>> {
     println!("Program start");
     println!(
         "Lean toolchain version used to build the lean-sys crate: {}",

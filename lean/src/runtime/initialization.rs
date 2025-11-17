@@ -19,11 +19,9 @@ impl<R: RuntimeComponents, M: Modules> RuntimeInitializer<R, M> {
         }
     }
 
-    pub fn new() -> Self {
-        unsafe {
-            R::initialize_runtime();
-        }
-        Self::initialize_fields()
+    pub fn new() -> Result<Self, <R as RuntimeComponents>::InitializationError> {
+        unsafe { R::initialize_runtime() }?;
+        Ok(Self::initialize_fields())
     }
 
     pub fn initialize_modules(self) -> Result<ModulesInitializer<R, M>, lean_obj_res> {
