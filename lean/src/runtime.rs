@@ -1,19 +1,17 @@
 use std::error::Error;
 use std::sync::Once;
 
-use lean_sys::{b_lean_obj_arg, lean_dec, lean_io_result_get_error};
+use lean_sys::b_lean_obj_arg;
 
 use crate::{LeanError, LeanIoError, Modules, RuntimeComponents};
 
 mod components;
-mod initialization;
 mod runtime_impl;
 
 pub use components::{
     ArgcError, LeanPackage, LeanPackageComponents, Minimal, MinimalComponents,
     RuntimeInitializationError,
 };
-pub use initialization::RuntimeInitializer;
 pub use runtime_impl::RuntimeImpl;
 
 static ONCE_INITIALIZATION_GUARD: Once = Once::new();
@@ -40,23 +38,10 @@ pub unsafe fn run_in_lean_runtime_unchecked<
     T,
     LeanError<<C as RuntimeComponents>::InitializationError, ModulesInitializationError, RunError>,
 > {
-    let runtime_initializer =
-        RuntimeInitializer::new().map_err(LeanError::RuntimeInitialization)?;
-    match runtime_initializer.initialize_modules() {
-        Ok(modules_initializer) => {
-            let runtime = modules_initializer.post_modules_initialization();
-            match run(&runtime) {
-                Ok(value) => Ok(value),
-                Err(e) => Err(e.into()),
-            }
-        }
-        Err(lean_io_result) => {
-            let lean_io_error = unsafe { lean_io_result_get_error(lean_io_result) };
-            let converted_error = modules_initialization_error_handler(lean_io_error);
-            unsafe { lean_dec(lean_io_result) };
-            Err(LeanError::ModulesInitialization(converted_error))
-        }
-    }
+    let runtime = { unsafe { RuntimeImpl::new_main_thread(modules_initialization_error_handler) } }
+        .map_err(LeanError::Initialization)?;
+    let value = run(&runtime)?;
+    Ok(value)
 }
 
 /// Initializes sets of Lean runtime components and modules and passes the
@@ -69,7 +54,7 @@ pub unsafe fn run_in_lean_runtime_unchecked<
 ///
 /// Callers must either avoid initializing the Lean runtime multiple times, or
 /// must use runtime components that are safe to initialize multiple times.
-pub fn run_in_lean_runtime_with_default_error_handler_unchecked<
+pub unsafe fn run_in_lean_runtime_with_default_error_handler_unchecked<
     C: RuntimeComponents,
     M: Modules,
     T,

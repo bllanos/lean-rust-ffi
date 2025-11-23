@@ -3,7 +3,9 @@ use std::error::Error;
 use std::ffi::CString;
 use std::str::FromStr;
 
-use lean::{LeanError, LeanIoError, MimallocAllocator, MinimalComponents, Modules};
+use lean::{
+    LeanError, LeanInitializationError, LeanIoError, MimallocAllocator, MinimalComponents, Modules,
+};
 use lean_sys::{
     lean_io_result_mk_error, lean_mk_io_user_error, lean_mk_string, lean_obj_arg, lean_obj_res,
 };
@@ -44,7 +46,9 @@ fn module_initialization_error() {
     let cstring = CString::from_str(TestModule::ERROR_MESSAGE).unwrap();
     assert_eq!(
         error,
-        LeanError::ModulesInitialization(LeanIoError(cstring))
+        LeanError::Initialization(LeanInitializationError::ModulesInitialization(LeanIoError(
+            cstring
+        )))
     );
     assert_eq!(&format!("{error}"), "Lean modules initialization error");
     assert_eq!(

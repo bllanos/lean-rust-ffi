@@ -20,10 +20,8 @@ mod runtime;
 mod sync;
 mod thread;
 
-use module::ModulesInitializer;
-
 pub use alloc::MimallocAllocator;
-pub use error::{LeanError, LeanIoError};
+pub use error::{LeanError, LeanInitializationError, LeanIoError};
 pub use module::NoModules;
 pub use runtime::{
     ArgcError, LeanPackage, LeanPackageComponents, Minimal, MinimalComponents, RuntimeImpl,

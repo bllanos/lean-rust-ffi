@@ -54,10 +54,21 @@ pub enum LeanError<
     ModulesInitializationError: Error,
     RunError: Error,
 > {
+    #[error("initialization error")]
+    Initialization(
+        #[source] LeanInitializationError<RuntimeInitializationError, ModulesInitializationError>,
+    ),
+    #[error(transparent)]
+    Run(#[from] RunError),
+}
+
+#[derive(thiserror::Error, Debug, Eq, PartialEq)]
+pub enum LeanInitializationError<
+    RuntimeInitializationError: Error,
+    ModulesInitializationError: Error,
+> {
     #[error("Lean runtime initialization error")]
     RuntimeInitialization(#[source] RuntimeInitializationError),
     #[error("Lean modules initialization error")]
     ModulesInitialization(#[source] ModulesInitializationError),
-    #[error(transparent)]
-    Run(#[from] RunError),
 }
