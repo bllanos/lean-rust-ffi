@@ -47,9 +47,9 @@ impl<R: RuntimeComponents, M: Modules> ModulesInitializer<R, M> {
         }
     }
 
-    pub fn mark_end_initialization(self) -> Runtime<R, M> {
+    pub fn post_modules_initialization(self) -> Runtime<R, M> {
         unsafe {
-            R::mark_end_initialization();
+            R::post_modules_initialization();
         }
         Runtime::new_main_thread()
     }

@@ -44,7 +44,7 @@ pub unsafe fn run_in_lean_runtime_unchecked<
         RuntimeInitializer::new().map_err(LeanError::RuntimeInitialization)?;
     match runtime_initializer.initialize_modules() {
         Ok(modules_initializer) => {
-            let runtime = modules_initializer.mark_end_initialization();
+            let runtime = modules_initializer.post_modules_initialization();
             match run(&runtime) {
                 Ok(value) => Ok(value),
                 Err(e) => Err(e.into()),

@@ -28,8 +28,8 @@ unsafe impl RuntimeComponents for MinimalComponents {
         Ok(())
     }
 
-    unsafe fn mark_end_initialization() {
-        mark_end_initialization();
+    unsafe fn post_modules_initialization() {
+        post_modules_initialization();
     }
 
     unsafe fn finalize_runtime() {
@@ -60,8 +60,8 @@ unsafe impl RuntimeComponents for LeanPackageComponents {
         Ok(())
     }
 
-    unsafe fn mark_end_initialization() {
-        mark_end_initialization();
+    unsafe fn post_modules_initialization() {
+        post_modules_initialization();
     }
 
     unsafe fn finalize_runtime() {
@@ -81,7 +81,7 @@ pub unsafe trait LeanPackage: Minimal {}
 
 unsafe impl LeanPackage for LeanPackageComponents {}
 
-fn mark_end_initialization() {
+fn post_modules_initialization() {
     unsafe {
         lean_io_mark_end_initialization();
         lean_init_task_manager();

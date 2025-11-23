@@ -58,7 +58,7 @@ pub unsafe trait RuntimeComponents {
     /// Callers must ensure that the Lean runtime is initialized at most once.
     unsafe fn initialize_runtime() -> Result<(), Self::InitializationError>;
 
-    /// Mark the end of the initialization phase
+    /// End the initialization phase
     ///
     /// This function will be called after both the Lean runtime and any Lean
     /// modules have been initialized.
@@ -66,7 +66,7 @@ pub unsafe trait RuntimeComponents {
     /// # Safety
     ///
     /// This function must not be called more than once.
-    unsafe fn mark_end_initialization();
+    unsafe fn post_modules_initialization();
 
     /// Finalize the Lean runtime
     ///
