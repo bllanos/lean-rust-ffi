@@ -4,13 +4,13 @@ use lean_sys::lean_obj_res;
 
 use crate::{Modules, ModulesInitializer, RuntimeComponents, sync::NonSendNonSync};
 
-pub struct RuntimeInitializer<R: RuntimeComponents, M: Modules> {
-    runtime_components: PhantomData<R>,
+pub struct RuntimeInitializer<C: RuntimeComponents, M: Modules> {
+    runtime_components: PhantomData<C>,
     modules_initializer: PhantomData<M>,
     non_send_non_sync: NonSendNonSync,
 }
 
-impl<R: RuntimeComponents, M: Modules> RuntimeInitializer<R, M> {
+impl<C: RuntimeComponents, M: Modules> RuntimeInitializer<C, M> {
     fn initialize_fields() -> Self {
         Self {
             runtime_components: PhantomData,
@@ -19,12 +19,12 @@ impl<R: RuntimeComponents, M: Modules> RuntimeInitializer<R, M> {
         }
     }
 
-    pub fn new() -> Result<Self, <R as RuntimeComponents>::InitializationError> {
-        unsafe { R::initialize_runtime() }?;
+    pub fn new() -> Result<Self, <C as RuntimeComponents>::InitializationError> {
+        unsafe { C::initialize_runtime() }?;
         Ok(Self::initialize_fields())
     }
 
-    pub fn initialize_modules(self) -> Result<ModulesInitializer<R, M>, lean_obj_res> {
+    pub fn initialize_modules(self) -> Result<ModulesInitializer<C, M>, lean_obj_res> {
         ModulesInitializer::new()
     }
 }

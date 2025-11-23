@@ -60,12 +60,13 @@ impl<TypeTag: LeanArrayTypeTag> Obj<TypeTag> {
 
 impl<TypeTag: LeanArrayTypeTag> Object<TypeTag> {
     pub fn from_exact_size_iterator<
-        R: Minimal,
+        C: Minimal,
         M: Modules,
+        R: Runtime<C, M>,
         T: Into<TypeTag::Input>,
         I: IntoIterator<Item = T>,
     >(
-        _runtime: &Runtime<R, M>,
+        _runtime: &R,
         data: I,
     ) -> Self
     where

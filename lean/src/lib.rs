@@ -26,7 +26,7 @@ pub use alloc::MimallocAllocator;
 pub use error::{LeanError, LeanIoError};
 pub use module::NoModules;
 pub use runtime::{
-    ArgcError, LeanPackage, LeanPackageComponents, Minimal, MinimalComponents, Runtime,
+    ArgcError, LeanPackage, LeanPackageComponents, Minimal, MinimalComponents, RuntimeImpl,
     RuntimeInitializationError, run_in_lean_runtime, run_in_lean_runtime_unchecked,
     run_in_lean_runtime_with_default_error_handler,
     run_in_lean_runtime_with_default_error_handler_unchecked,
@@ -47,7 +47,7 @@ pub use thread::{
 /// # Safety
 ///
 /// Implementations of this trait must guarantee that the Lean runtime is
-/// properly initialized.
+/// initialized.
 pub unsafe trait RuntimeComponents {
     type InitializationError: Error;
 
@@ -88,7 +88,7 @@ pub unsafe trait RuntimeComponents {
 /// # Safety
 ///
 /// Implementations of this trait must guarantee that the Lean modules are
-/// properly initialized.
+/// initialized.
 pub unsafe trait Modules {
     /// Initialize all required Lean modules
     ///
@@ -104,4 +104,37 @@ pub unsafe trait Modules {
     /// Callers must ensure that the Lean runtime has been initialized before
     /// calling this function.
     unsafe fn initialize_modules(builtin: u8, lean_io_world: lean_obj_arg) -> lean_obj_res;
+}
+
+/// A set of initialized Lean runtime features and Lean modules
+///
+/// Rust functions that require Lean runtime features and Lean modules to be
+/// initialized first can require a parameter of a type that implements this
+/// trait for the given runtime features and modules.
+///
+/// # Safety
+///
+/// Implementations of this trait must guarantee that the Lean runtime and
+/// modules are initialized.
+pub unsafe trait Runtime<C: RuntimeComponents, M: Modules> {}
+
+/// A set of initialized Lean runtime features and Lean modules that can be used
+/// on a secondary thread
+///
+/// Rust functions that need to spawn threads that use Lean runtime features and
+/// Lean modules can require a parameter of a type that implements this trait
+/// for the given runtime features and modules.
+///
+/// # Safety
+///
+/// Implementations of this trait must guarantee that the Lean runtime and
+/// modules are initialized and are safe to use across multiple threads. They
+/// must also initialize and clean up per-thread resources.
+pub unsafe trait ThreadRuntime<C: RuntimeComponents, M: Modules>: Runtime<C, M> {
+    /// Create a runtime for using Lean functions on a new thread
+    ///
+    /// # Safety
+    ///
+    /// Callers must invoke this function on the new thread.
+    unsafe fn new_thread() -> Self;
 }

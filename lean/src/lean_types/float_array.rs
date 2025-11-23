@@ -30,12 +30,13 @@ impl Obj<FloatArrayTypeTag> {
 
 impl Object<FloatArrayTypeTag> {
     pub fn from_exact_size_iterator<
-        R: Minimal,
+        C: Minimal,
         M: Modules,
+        R: Runtime<C, M>,
         T: Into<f64>,
         I: IntoIterator<Item = T>,
     >(
-        _runtime: &Runtime<R, M>,
+        _runtime: &R,
         data: I,
     ) -> Self
     where

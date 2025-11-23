@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::thread;
 
 use lean::{
-    MimallocAllocator, MinimalComponents, NoModules, Runtime,
+    MimallocAllocator, MinimalComponents, NoModules,
     lean_types::{Owner, string::LeanString},
 };
 use lean_sys::lean_string_push;
@@ -14,8 +14,8 @@ static ALLOCATOR: MimallocAllocator = MimallocAllocator {};
 
 #[test]
 fn make_string() {
-    lean::run_in_lean_runtime_with_default_error_handler(
-        |runtime: &Runtime<MinimalComponents, NoModules>| {
+    lean::run_in_lean_runtime_with_default_error_handler::<MinimalComponents, NoModules, _, _, _>(
+        |runtime| {
             let initial_string = String::from("Hello, world");
             let new_char = b'!';
             let initial_cstring = CString::from_str(&initial_string).unwrap();

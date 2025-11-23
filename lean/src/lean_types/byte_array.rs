@@ -30,12 +30,13 @@ impl Obj<ByteArrayTypeTag> {
 
 impl Object<ByteArrayTypeTag> {
     pub fn from_exact_size_iterator<
-        R: Minimal,
+        C: Minimal,
         M: Modules,
+        R: Runtime<C, M>,
         T: Into<u8>,
         I: IntoIterator<Item = T>,
     >(
-        _runtime: &Runtime<R, M>,
+        _runtime: &R,
         data: I,
     ) -> Self
     where

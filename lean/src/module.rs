@@ -5,7 +5,7 @@ use lean_sys::{
     lean_obj_res, lean_object,
 };
 
-use crate::{Modules, Runtime, RuntimeComponents, sync::NonSendNonSync};
+use crate::{Modules, RuntimeComponents, RuntimeImpl, sync::NonSendNonSync};
 
 pub enum NoModules {}
 
@@ -15,13 +15,13 @@ unsafe impl Modules for NoModules {
     }
 }
 
-pub struct ModulesInitializer<R: RuntimeComponents, M: Modules> {
-    runtime_components: PhantomData<R>,
+pub struct ModulesInitializer<C: RuntimeComponents, M: Modules> {
+    runtime_components: PhantomData<C>,
     modules_initializer: PhantomData<M>,
     non_send_non_sync: NonSendNonSync,
 }
 
-impl<R: RuntimeComponents, M: Modules> ModulesInitializer<R, M> {
+impl<C: RuntimeComponents, M: Modules> ModulesInitializer<C, M> {
     fn initialize_fields() -> Self {
         Self {
             runtime_components: PhantomData,
@@ -47,10 +47,10 @@ impl<R: RuntimeComponents, M: Modules> ModulesInitializer<R, M> {
         }
     }
 
-    pub fn post_modules_initialization(self) -> Runtime<R, M> {
+    pub fn post_modules_initialization(self) -> RuntimeImpl<C, M> {
         unsafe {
-            R::post_modules_initialization();
+            C::post_modules_initialization();
+            RuntimeImpl::new_main_thread()
         }
-        Runtime::new_main_thread()
     }
 }

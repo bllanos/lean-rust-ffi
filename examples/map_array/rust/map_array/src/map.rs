@@ -9,8 +9,8 @@ use map_array_sys::MapArray::Basic_c::my_map as my_map_sys;
 
 use crate::{MapArrayModule, MapOptions};
 
-pub fn my_map<R: Minimal, M: MapArrayModule, I: IntoIterator<Item = u8>>(
-    runtime: &Runtime<R, M>,
+pub fn my_map<C: Minimal, M: MapArrayModule, R: Runtime<C, M>, I: IntoIterator<Item = u8>>(
+    runtime: &R,
     options: MapOptions,
     data: I,
 ) -> Integer32Array<i32>

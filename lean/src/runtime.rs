@@ -6,15 +6,15 @@ use lean_sys::{b_lean_obj_arg, lean_dec, lean_io_result_get_error};
 use crate::{LeanError, LeanIoError, Modules, RuntimeComponents};
 
 mod components;
-mod handle;
 mod initialization;
+mod runtime_impl;
 
 pub use components::{
     ArgcError, LeanPackage, LeanPackageComponents, Minimal, MinimalComponents,
     RuntimeInitializationError,
 };
-pub use handle::Runtime;
 pub use initialization::RuntimeInitializer;
+pub use runtime_impl::RuntimeImpl;
 
 static ONCE_INITIALIZATION_GUARD: Once = Once::new();
 
@@ -26,19 +26,19 @@ static ONCE_INITIALIZATION_GUARD: Once = Once::new();
 /// Callers must either avoid initializing the Lean runtime multiple times, or
 /// must use runtime components that are safe to initialize multiple times.
 pub unsafe fn run_in_lean_runtime_unchecked<
-    R: RuntimeComponents,
+    C: RuntimeComponents,
     M: Modules,
     T,
     ModulesInitializationError: Error,
     ModulesInitializationErrorHandler: FnOnce(b_lean_obj_arg) -> ModulesInitializationError,
     RunError: Error,
-    Run: FnOnce(&Runtime<R, M>) -> Result<T, RunError>,
+    Run: FnOnce(&RuntimeImpl<C, M>) -> Result<T, RunError>,
 >(
     modules_initialization_error_handler: ModulesInitializationErrorHandler,
     run: Run,
 ) -> Result<
     T,
-    LeanError<<R as RuntimeComponents>::InitializationError, ModulesInitializationError, RunError>,
+    LeanError<<C as RuntimeComponents>::InitializationError, ModulesInitializationError, RunError>,
 > {
     let runtime_initializer =
         RuntimeInitializer::new().map_err(LeanError::RuntimeInitialization)?;
@@ -70,14 +70,14 @@ pub unsafe fn run_in_lean_runtime_unchecked<
 /// Callers must either avoid initializing the Lean runtime multiple times, or
 /// must use runtime components that are safe to initialize multiple times.
 pub fn run_in_lean_runtime_with_default_error_handler_unchecked<
-    R: RuntimeComponents,
+    C: RuntimeComponents,
     M: Modules,
     T,
     RunError: Error,
-    Run: FnOnce(&Runtime<R, M>) -> Result<T, RunError>,
+    Run: FnOnce(&RuntimeImpl<C, M>) -> Result<T, RunError>,
 >(
     run: Run,
-) -> Result<T, LeanError<<R as RuntimeComponents>::InitializationError, LeanIoError, RunError>> {
+) -> Result<T, LeanError<<C as RuntimeComponents>::InitializationError, LeanIoError, RunError>> {
     unsafe {
         run_in_lean_runtime_unchecked(
             |lean_io_error| LeanIoError::from_lean_io_error(lean_io_error),
@@ -99,19 +99,19 @@ pub fn run_in_lean_runtime_with_default_error_handler_unchecked<
 /// See also [`run_in_lean_runtime_unchecked()`] which does not panic but
 /// delegates repeated initialization checks to the caller.
 pub fn run_in_lean_runtime<
-    R: RuntimeComponents,
+    C: RuntimeComponents,
     M: Modules,
     T,
     ModulesInitializationError: Error,
     ModulesInitializationErrorHandler: FnOnce(b_lean_obj_arg) -> ModulesInitializationError,
     RunError: Error,
-    Run: FnOnce(&Runtime<R, M>) -> Result<T, RunError>,
+    Run: FnOnce(&RuntimeImpl<C, M>) -> Result<T, RunError>,
 >(
     modules_initialization_error_handler: ModulesInitializationErrorHandler,
     run: Run,
 ) -> Result<
     T,
-    LeanError<<R as RuntimeComponents>::InitializationError, ModulesInitializationError, RunError>,
+    LeanError<<C as RuntimeComponents>::InitializationError, ModulesInitializationError, RunError>,
 > {
     let mut result = None;
     ONCE_INITIALIZATION_GUARD.call_once(|| {
@@ -139,14 +139,14 @@ pub fn run_in_lean_runtime<
 /// See also [`run_in_lean_runtime_with_default_error_handler_unchecked()`] which
 /// does not panic but delegates repeated initialization checks to the caller.
 pub fn run_in_lean_runtime_with_default_error_handler<
-    R: RuntimeComponents,
+    C: RuntimeComponents,
     M: Modules,
     T,
     RunError: Error,
-    Run: FnOnce(&Runtime<R, M>) -> Result<T, RunError>,
+    Run: FnOnce(&RuntimeImpl<C, M>) -> Result<T, RunError>,
 >(
     run: Run,
-) -> Result<T, LeanError<<R as RuntimeComponents>::InitializationError, LeanIoError, RunError>> {
+) -> Result<T, LeanError<<C as RuntimeComponents>::InitializationError, LeanIoError, RunError>> {
     run_in_lean_runtime(
         |lean_io_error| unsafe { LeanIoError::from_lean_io_error(lean_io_error) },
         run,

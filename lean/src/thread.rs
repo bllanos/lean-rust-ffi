@@ -1,42 +1,45 @@
 use std::thread::{Builder, JoinHandle, Scope, ScopedJoinHandle};
 
-use lean_sys::{lean_finalize_thread, lean_initialize_thread};
+use crate::{Modules, RuntimeComponents, ThreadRuntime};
 
-use crate::{Modules, Runtime, RuntimeComponents};
-
-fn run_lean_thread<R: RuntimeComponents, M: Modules, T, Run: FnOnce(&Runtime<R, M>) -> T>(
+fn run_lean_thread<
+    C: RuntimeComponents,
+    M: Modules,
+    R: ThreadRuntime<C, M>,
+    T,
+    Run: FnOnce(&R) -> T,
+>(
     run: Run,
 ) -> T {
-    unsafe {
-        lean_initialize_thread();
-    }
-    let runtime = Runtime::new_secondary_thread();
-    let output = run(&runtime);
-    unsafe {
-        lean_finalize_thread();
+    let output;
+    {
+        let runtime = unsafe { R::new_thread() };
+        output = run(&runtime);
     }
     output
 }
 
 pub fn run_in_thread_with_lean_runtime<
-    R: RuntimeComponents,
+    C: RuntimeComponents,
     M: Modules,
+    R: ThreadRuntime<C, M>,
     T: Send + 'static,
-    Run: FnOnce(&Runtime<R, M>) -> T + Send + 'static,
+    Run: FnOnce(&R) -> T + Send + 'static,
 >(
-    _runtime: &Runtime<R, M>,
+    _runtime: &R,
     run: Run,
 ) -> JoinHandle<T> {
     std::thread::spawn(move || run_lean_thread(run))
 }
 
 pub fn run_in_custom_thread_with_lean_runtime<
-    R: RuntimeComponents,
+    C: RuntimeComponents,
     M: Modules,
+    R: ThreadRuntime<C, M>,
     T: Send + 'static,
-    Run: FnOnce(&Runtime<R, M>) -> T + Send + 'static,
+    Run: FnOnce(&R) -> T + Send + 'static,
 >(
-    _runtime: &Runtime<R, M>,
+    _runtime: &R,
     builder: Builder,
     run: Run,
 ) -> std::io::Result<JoinHandle<T>> {
@@ -46,12 +49,13 @@ pub fn run_in_custom_thread_with_lean_runtime<
 pub fn run_in_custom_scoped_thread_with_lean_runtime<
     'scope,
     'env,
-    R: RuntimeComponents,
+    C: RuntimeComponents,
     M: Modules,
+    R: ThreadRuntime<C, M>,
     T: Send + 'scope,
-    Run: FnOnce(&Runtime<R, M>) -> T + Send + 'scope,
+    Run: FnOnce(&R) -> T + Send + 'scope,
 >(
-    _runtime: &Runtime<R, M>,
+    _runtime: &R,
     builder: Builder,
     scope: &'scope Scope<'scope, 'env>,
     run: Run,

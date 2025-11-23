@@ -42,7 +42,7 @@ unsafe impl RuntimeComponents for MinimalComponents {
 /// # Safety
 ///
 /// Implementations of this trait must guarantee that the Lean runtime is
-/// properly initialized.
+/// initialized.
 pub unsafe trait Minimal: RuntimeComponents {}
 
 unsafe impl Minimal for MinimalComponents {}
@@ -76,7 +76,7 @@ unsafe impl Minimal for LeanPackageComponents {}
 /// # Safety
 ///
 /// Implementations of this trait must guarantee that the Lean package is
-/// properly initialized.
+/// initialized.
 pub unsafe trait LeanPackage: Minimal {}
 
 unsafe impl LeanPackage for LeanPackageComponents {}

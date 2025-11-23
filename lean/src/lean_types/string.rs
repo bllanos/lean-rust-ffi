@@ -26,8 +26,8 @@ impl Obj<StringTypeTag> {
 pub type LeanString = Object<StringTypeTag>;
 
 impl Object<StringTypeTag> {
-    pub fn from_cstr<R: Minimal, M: Modules, T: AsRef<CStr>>(
-        _runtime: &Runtime<R, M>,
+    pub fn from_cstr<C: Minimal, M: Modules, R: Runtime<C, M>, T: AsRef<CStr>>(
+        _runtime: &R,
         value: T,
     ) -> Self {
         let cstr = value.as_ref();

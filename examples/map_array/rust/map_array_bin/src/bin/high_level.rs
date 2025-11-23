@@ -1,8 +1,7 @@
 #![forbid(unsafe_code)]
 
 use lean::{
-    LeanError, LeanIoError, MimallocAllocator, MinimalComponents, Runtime,
-    RuntimeInitializationError,
+    LeanError, LeanIoError, MimallocAllocator, MinimalComponents, RuntimeInitializationError,
 };
 use lean_sys::ELAN_TOOLCHAIN;
 use map_array::{MapArrayModuleInitializer, MapOptions};
@@ -18,31 +17,35 @@ fn main()
         ELAN_TOOLCHAIN
     );
 
-    lean::run_in_lean_runtime_with_default_error_handler(
-        |runtime: &Runtime<MinimalComponents, MapArrayModuleInitializer>| {
-            let addend: i32 = 2;
-            let multiplicand: i32 = 3;
-            let map_options = MapOptions::new(runtime, addend, multiplicand);
+    lean::run_in_lean_runtime_with_default_error_handler::<
+        MinimalComponents,
+        MapArrayModuleInitializer,
+        _,
+        _,
+        _,
+    >(|runtime| {
+        let addend: i32 = 2;
+        let multiplicand: i32 = 3;
+        let map_options = MapOptions::new(runtime, addend, multiplicand);
 
-            println!("MapOptions instance: {}", map_options);
+        println!("MapOptions instance: {}", map_options);
 
-            let mut array: [u8; 6] = Default::default();
-            for (i, element) in array.iter_mut().enumerate() {
-                *element = (i * 5).try_into()?;
-            }
-            println!("Input array: {:?}", array);
+        let mut array: [u8; 6] = Default::default();
+        for (i, element) in array.iter_mut().enumerate() {
+            *element = (i * 5).try_into()?;
+        }
+        println!("Input array: {:?}", array);
 
-            let array_out = map_array::my_map(runtime, map_options, array);
+        let array_out = map_array::my_map(runtime, map_options, array);
 
-            print!("Output array: [ ");
-            for value in array_out.iter() {
-                print!("{}, ", value);
-            }
-            println!("]");
+        print!("Output array: [ ");
+        for value in array_out.iter() {
+            print!("{}, ", value);
+        }
+        println!("]");
 
-            Ok(())
-        },
-    )?;
+        Ok(())
+    })?;
 
     println!("Program end");
 

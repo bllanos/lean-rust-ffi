@@ -11,8 +11,8 @@ use crate::MapArrayModule;
 pub struct MapOptions(Object<Self>);
 
 impl MapOptions {
-    pub fn new<R: Minimal, M: MapArrayModule>(
-        _runtime: &Runtime<R, M>,
+    pub fn new<C: Minimal, M: MapArrayModule, R: Runtime<C, M>>(
+        _runtime: &R,
         addend: i32,
         multiplicand: i32,
     ) -> Self {
