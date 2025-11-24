@@ -25,7 +25,8 @@ pub use error::{LeanError, LeanInitializationError, LeanIoError};
 pub use module::NoModules;
 pub use runtime::{
     ArgcError, LeanPackage, LeanPackageComponents, Minimal, MinimalComponents, RuntimeImpl,
-    RuntimeInitializationError, run_in_lean_runtime, run_in_lean_runtime_unchecked,
+    RuntimeInitializationError, new_main_thread_lean_runtime_with_default_error_handler_unchecked,
+    run_in_lean_runtime, run_in_lean_runtime_unchecked,
     run_in_lean_runtime_with_default_error_handler,
     run_in_lean_runtime_with_default_error_handler_unchecked,
 };

@@ -3,7 +3,7 @@ use std::sync::Once;
 
 use lean_sys::b_lean_obj_arg;
 
-use crate::{LeanError, LeanIoError, Modules, RuntimeComponents};
+use crate::{LeanError, LeanInitializationError, LeanIoError, Modules, RuntimeComponents};
 
 mod components;
 mod runtime_impl;
@@ -47,7 +47,7 @@ pub unsafe fn run_in_lean_runtime_unchecked<
 /// Initializes sets of Lean runtime components and modules and passes the
 /// runtime to a function that depends on Lean functionality
 ///
-/// Uses `LeanIoError::from_lean_io_error()` to convert Lean module
+/// Uses [`LeanIoError::from_lean_io_error()`] to convert Lean module
 /// initialization errors to `LeanError`.
 ///
 /// # Safety
@@ -68,6 +68,29 @@ pub unsafe fn run_in_lean_runtime_with_default_error_handler_unchecked<
             |lean_io_error| LeanIoError::from_lean_io_error(lean_io_error),
             run,
         )
+    }
+}
+
+/// Initializes sets of Lean runtime components and modules
+///
+/// Uses [`LeanIoError::from_lean_io_error()`] to convert Lean module
+/// initialization errors to `LeanError`.
+///
+/// This is a convenience wrapper around [`RuntimeImpl::new_main_thread()`].
+///
+/// # Safety
+///
+/// Callers must either avoid initializing the Lean runtime multiple times, or
+/// must use runtime components that are safe to initialize multiple times.
+pub unsafe fn new_main_thread_lean_runtime_with_default_error_handler_unchecked<
+    C: RuntimeComponents,
+    M: Modules,
+>() -> Result<
+    RuntimeImpl<C, M>,
+    LeanInitializationError<<C as RuntimeComponents>::InitializationError, LeanIoError>,
+> {
+    unsafe {
+        RuntimeImpl::new_main_thread(|lean_io_error| LeanIoError::from_lean_io_error(lean_io_error))
     }
 }
 
@@ -110,7 +133,7 @@ pub fn run_in_lean_runtime<
 /// Initializes sets of Lean runtime components and modules and passes the
 /// runtime to a function that depends on Lean functionality
 ///
-/// Uses `LeanIoError::from_lean_io_error()` to convert Lean module
+/// Uses [`LeanIoError::from_lean_io_error()`] to convert Lean module
 /// initialization errors to `LeanError`.
 ///
 /// # Panics
