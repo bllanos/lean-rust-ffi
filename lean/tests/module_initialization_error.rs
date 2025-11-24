@@ -50,9 +50,10 @@ fn module_initialization_error() {
             cstring
         )))
     );
-    assert_eq!(&format!("{error}"), "Lean modules initialization error");
-    assert_eq!(
-        &format!("{}", error.source().unwrap()),
-        TestModule::ERROR_MESSAGE
-    );
+    assert_eq!(&format!("{error}"), "initialization error");
+    let mut source = error.source().unwrap();
+    assert_eq!(&format!("{source}"), "Lean modules initialization error");
+    source = source.source().unwrap();
+    assert_eq!(&format!("{source}"), TestModule::ERROR_MESSAGE);
+    assert!(source.source().is_none());
 }
