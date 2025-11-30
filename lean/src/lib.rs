@@ -25,10 +25,13 @@ pub use error::{LeanError, LeanInitializationError, LeanIoError};
 pub use module::NoModules;
 pub use runtime::{
     ArgcError, LeanPackage, LeanPackageComponents, Minimal, MinimalComponents, RuntimeImpl,
-    RuntimeInitializationError, new_main_thread_lean_runtime_with_default_error_handler_unchecked,
-    run_in_lean_runtime, run_in_lean_runtime_unchecked,
-    run_in_lean_runtime_with_default_error_handler,
-    run_in_lean_runtime_with_default_error_handler_unchecked,
+    RuntimeInitializationError, ThreadRuntimeImpl,
+    new_primary_thread_lean_runtime_with_default_error_handler_unchecked,
+    new_primary_thread_lean_sync_runtime_with_default_error_handler_unchecked, run_in_lean_runtime,
+    run_in_lean_runtime_unchecked, run_in_lean_runtime_with_default_error_handler,
+    run_in_lean_runtime_with_default_error_handler_unchecked, run_in_lean_sync_runtime,
+    run_in_lean_sync_runtime_unchecked, run_in_lean_sync_runtime_with_default_error_handler,
+    run_in_lean_sync_runtime_with_default_error_handler_unchecked,
 };
 pub use thread::{
     run_in_custom_scoped_thread_with_lean_runtime, run_in_custom_thread_with_lean_runtime,
@@ -64,16 +67,63 @@ pub unsafe trait RuntimeComponents {
     ///
     /// # Safety
     ///
-    /// This function must not be called more than once.
+    /// Callers must ensure that:
+    ///
+    /// 1. [`Self::initialize_runtime()`] has previously succeeded
+    /// 2. This function is called at most once and is called on the same thread
+    ///    as [`Self::initialize_runtime()`]
     unsafe fn post_modules_initialization();
 
     /// Finalize the Lean runtime
     ///
     /// # Safety
     ///
-    /// Callers must ensure that the Lean runtime has been previously
-    /// initialized and is finalized at most once
+    /// Callers must ensure that:
+    ///
+    /// 1. [`Self::initialize_runtime()`] and
+    ///    [`Self::post_modules_initialization()`] have been previously called
+    ///    and succeeded
+    /// 2. This function is called at most once and is called on the same thread
+    ///    as the previous functions
+    /// 3. Lean runtime features are not used after this function is called
     unsafe fn finalize_runtime();
+}
+
+/// A set of features that are available in the Lean runtime for use on multiple
+/// threads
+///
+/// # Safety
+///
+/// Implementations of this trait must guarantee that the Lean runtime is
+/// initialized and that all runtime features can be used on multiple threads.
+pub unsafe trait SyncRuntimeComponents: RuntimeComponents {
+    type ThreadInitializationError: Error;
+
+    /// Initialize per-thread resources
+    ///
+    /// # Safety
+    ///
+    /// Callers must ensure that:
+    ///
+    /// 1. [`RuntimeComponents::initialize_runtime()`] and
+    ///    [`RuntimeComponents::post_modules_initialization()`]
+    ///    have been previously called and succeeded
+    /// 2. This function is called at most once per new thread, and is called on
+    ///    the new threads.
+    unsafe fn initialize_thread() -> Result<(), Self::ThreadInitializationError>;
+
+    /// Finalize per-thread resources
+    ///
+    /// # Safety
+    ///
+    /// Callers must ensure that:
+    ///
+    /// 1. [`Self::initialize_thread()`] has been previously called and succeeded
+    /// 2. This function is called at most once and is called on the same thread
+    ///    as [`Self::initialize_thread()`]
+    /// 3. Lean runtime features are not used on the current thread after this
+    ///    function is called
+    unsafe fn finalize_thread();
 }
 
 /// A trait to be implemented by types that initialize one or more Lean modules
@@ -118,7 +168,7 @@ pub unsafe trait Modules {
 pub unsafe trait Runtime<C: RuntimeComponents, M: Modules> {}
 
 /// A set of initialized Lean runtime features and Lean modules that can be used
-/// on a secondary thread
+/// on multiple threads
 ///
 /// Rust functions that need to spawn threads that use Lean runtime features and
 /// Lean modules can require a parameter of a type that implements this trait
@@ -129,11 +179,17 @@ pub unsafe trait Runtime<C: RuntimeComponents, M: Modules> {}
 /// Implementations of this trait must guarantee that the Lean runtime and
 /// modules are initialized and are safe to use across multiple threads. They
 /// must also initialize and clean up per-thread resources.
-pub unsafe trait ThreadRuntime<C: RuntimeComponents, M: Modules>: Runtime<C, M> {
+pub unsafe trait ThreadRuntime<C: SyncRuntimeComponents, M: Modules>:
+    Sized + Runtime<C, M>
+{
+    type ThreadInitializationError: Error;
+
     /// Create a runtime for using Lean functions on a new thread
     ///
     /// # Safety
     ///
-    /// Callers must invoke this function on the new thread.
-    unsafe fn new_thread() -> Self;
+    /// Callers must invoke this function on the new thread. Callers must have
+    /// successfully initialized the Lean runtime features on the primary
+    /// thread using the functions from [`Runtime`].
+    unsafe fn new_secondary_thread() -> Result<Self, Self::ThreadInitializationError>;
 }

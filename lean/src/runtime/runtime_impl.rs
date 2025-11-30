@@ -2,28 +2,23 @@ use std::error::Error;
 use std::marker::PhantomData;
 
 use lean_sys::{
-    b_lean_obj_arg, lean_dec, lean_finalize_thread, lean_initialize_thread, lean_io_mk_world,
-    lean_io_result_get_error, lean_io_result_is_ok, lean_obj_res, lean_object,
+    b_lean_obj_arg, lean_dec, lean_io_mk_world, lean_io_result_get_error, lean_io_result_is_ok,
+    lean_obj_res, lean_object,
 };
 
-use crate::{
-    LeanInitializationError, Modules, Runtime, RuntimeComponents, ThreadRuntime,
-    sync::NonSendNonSync,
-};
+use crate::{LeanInitializationError, Modules, Runtime, RuntimeComponents, sync::NonSendNonSync};
 
 pub struct RuntimeImpl<C: RuntimeComponents, M: Modules> {
     runtime_components: PhantomData<C>,
     modules_initializer: PhantomData<M>,
-    is_main_thread: bool,
     non_send_non_sync: NonSendNonSync,
 }
 
 impl<C: RuntimeComponents, M: Modules> RuntimeImpl<C, M> {
-    fn new(is_main_thread: bool) -> Self {
+    fn new() -> Self {
         Self {
             runtime_components: PhantomData,
             modules_initializer: PhantomData,
-            is_main_thread,
             non_send_non_sync: PhantomData,
         }
     }
@@ -32,7 +27,7 @@ impl<C: RuntimeComponents, M: Modules> RuntimeImpl<C, M> {
     ///
     /// # Safety
     ///
-    /// Callers must call this function on the main thread and must call it at
+    /// Callers must call this function on the primary thread and must call it at
     /// most once. The Lean runtime must already be initialized.
     unsafe fn initialize_modules() -> Result<(), lean_obj_res> {
         let res: *mut lean_object;
@@ -51,16 +46,16 @@ impl<C: RuntimeComponents, M: Modules> RuntimeImpl<C, M> {
         }
     }
 
-    /// Create a new runtime for use on the main thread
+    /// Create a new runtime for use on the primary thread
     ///
     /// Initializes the Lean runtime features and the Lean modules corresponding
     /// to this type's generic parameters.
     ///
     /// # Safety
     ///
-    /// Callers must only call this function on the main thread and must call it
-    /// at most once.
-    pub unsafe fn new_main_thread<
+    /// Callers must only call this function on the primary thread and must call
+    /// it at most once.
+    pub unsafe fn new_primary_thread<
         ModulesInitializationError: Error,
         ModulesInitializationErrorHandler: FnOnce(b_lean_obj_arg) -> ModulesInitializationError,
     >(
@@ -83,31 +78,16 @@ impl<C: RuntimeComponents, M: Modules> RuntimeImpl<C, M> {
         unsafe {
             C::post_modules_initialization();
         }
-        Ok(Self::new(true))
+        Ok(Self::new())
     }
 }
 
 impl<C: RuntimeComponents, M: Modules> Drop for RuntimeImpl<C, M> {
     fn drop(&mut self) {
-        if self.is_main_thread {
-            unsafe {
-                C::finalize_runtime();
-            }
-        } else {
-            unsafe {
-                lean_finalize_thread();
-            }
+        unsafe {
+            C::finalize_runtime();
         }
     }
 }
 
 unsafe impl<C: RuntimeComponents, M: Modules> Runtime<C, M> for RuntimeImpl<C, M> {}
-
-unsafe impl<C: RuntimeComponents, M: Modules> ThreadRuntime<C, M> for RuntimeImpl<C, M> {
-    unsafe fn new_thread() -> Self {
-        unsafe {
-            lean_initialize_thread();
-        }
-        Self::new(false)
-    }
-}

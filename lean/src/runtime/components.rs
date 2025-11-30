@@ -1,9 +1,11 @@
+use std::convert::Infallible;
+
 use lean_sys::{
-    lean_finalize_task_manager, lean_init_task_manager, lean_initialize,
-    lean_initialize_runtime_module, lean_io_mark_end_initialization,
+    lean_finalize_task_manager, lean_finalize_thread, lean_init_task_manager, lean_initialize,
+    lean_initialize_runtime_module, lean_initialize_thread, lean_io_mark_end_initialization,
 };
 
-use crate::RuntimeComponents;
+use crate::{RuntimeComponents, SyncRuntimeComponents};
 
 mod args;
 
@@ -34,6 +36,18 @@ unsafe impl RuntimeComponents for MinimalComponents {
 
     unsafe fn finalize_runtime() {
         finalize_runtime();
+    }
+}
+
+unsafe impl SyncRuntimeComponents for MinimalComponents {
+    type ThreadInitializationError = Infallible;
+
+    unsafe fn initialize_thread() -> Result<(), Self::ThreadInitializationError> {
+        initialize_thread()
+    }
+
+    unsafe fn finalize_thread() {
+        finalize_thread();
     }
 }
 
@@ -69,6 +83,18 @@ unsafe impl RuntimeComponents for LeanPackageComponents {
     }
 }
 
+unsafe impl SyncRuntimeComponents for LeanPackageComponents {
+    type ThreadInitializationError = Infallible;
+
+    unsafe fn initialize_thread() -> Result<(), Self::ThreadInitializationError> {
+        initialize_thread()
+    }
+
+    unsafe fn finalize_thread() {
+        finalize_thread();
+    }
+}
+
 unsafe impl Minimal for LeanPackageComponents {}
 
 /// A trait implemented by types that initialize the Lean package
@@ -91,5 +117,18 @@ fn post_modules_initialization() {
 fn finalize_runtime() {
     unsafe {
         lean_finalize_task_manager();
+    }
+}
+
+fn initialize_thread() -> Result<(), Infallible> {
+    unsafe {
+        lean_initialize_thread();
+    }
+    Ok(())
+}
+
+fn finalize_thread() {
+    unsafe {
+        lean_finalize_thread();
     }
 }
