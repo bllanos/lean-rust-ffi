@@ -15,6 +15,150 @@ pub fn create_module_trait(
     output.unwrap_or_else(syn::Error::into_compile_error).into()
 }
 
+/// Create a type that initializes multiple Lean modules
+///
+/// # Syntax
+///
+/// ```text
+/// combine_lean_module_initializers! {
+///     $VISIBILITY $STRUCT_NAME {
+///         $MODULE_INITIALIZER_TYPE1 : $MODULE_TRAIT1,
+///         $MODULE_INITIALIZER_TYPE2 : $MODULE_TRAIT2,
+///         ...
+///         $MODULE_INITIALIZER_TYPEN : $MODULE_TRAITN(,)
+///     }
+/// }
+/// ```
+///
+/// Where `MODULE_INITIALIZER_TYPE` identifiers are types that implement
+/// `lean::Modules` and also implement the associated `MODULE_TRAIT` traits,
+/// which have `lean::Modules` as a supertrait.
+///
+/// For example:
+///
+/// ```no_run
+/// # extern crate lean;
+/// # extern crate lean_sys;
+/// #
+/// use lean_macro::{
+///   combine_lean_module_initializers, create_module_trait
+/// };
+///
+/// enum ParsingTypes {}
+///
+/// # unsafe impl lean::Modules for ParsingTypes {
+/// #     unsafe fn initialize_modules(
+/// #         _builtin: u8,
+/// #         _lean_io_world: lean_sys::lean_obj_arg,
+/// #     ) -> lean_sys::lean_obj_res {
+/// #         unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
+/// #     }
+/// # }
+/// #
+/// unsafe trait ParsingTypesModule: lean::Modules {}
+///
+/// # unsafe impl ParsingTypesModule for ParsingTypes {}
+/// #
+/// enum YamlParser {}
+///
+/// # unsafe impl lean::Modules for YamlParser {
+/// #     unsafe fn initialize_modules(
+/// #         _builtin: u8,
+/// #         _lean_io_world: lean_sys::lean_obj_arg,
+/// #     ) -> lean_sys::lean_obj_res {
+/// #         unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
+/// #     }
+/// # }
+/// #
+/// unsafe trait YamlParserModule: lean::Modules {}
+///
+/// # unsafe impl YamlParserModule for YamlParser {}
+/// #
+/// #[create_module_trait]
+/// enum JsonParserModuleInitializer {}
+///
+/// # unsafe impl lean::Modules for JsonParserModuleInitializer {
+/// #     unsafe fn initialize_modules(
+/// #         _builtin: u8,
+/// #         _lean_io_world: lean_sys::lean_obj_arg,
+/// #     ) -> lean_sys::lean_obj_res {
+/// #         unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
+/// #     }
+/// # }
+/// #
+/// combine_lean_module_initializers! {
+///     pub AllParsingModulesInitializer {
+///         ParsingTypes : ParsingTypesModule,
+///         YamlParser : YamlParserModule,
+///         JsonParserModuleInitializer : JsonParserModule,
+///     }
+/// }
+/// ```
+///
+/// Module initializer types and module initialization traits can have arbitrary
+/// names, for flexibility. They do not need to follow the naming conventions
+/// imposed by other macros. If some module initializer types do follow the
+/// naming conventions, however, then the associated module initialization
+/// traits can be omitted. For example:
+///
+/// ```no_run
+/// # extern crate lean;
+/// # extern crate lean_sys;
+/// #
+/// # use lean_macro::{
+/// #   combine_lean_module_initializers, create_module_trait
+/// # };
+/// #
+/// # enum ParsingTypes {}
+/// #
+/// # unsafe impl lean::Modules for ParsingTypes {
+/// #     unsafe fn initialize_modules(
+/// #         _builtin: u8,
+/// #         _lean_io_world: lean_sys::lean_obj_arg,
+/// #     ) -> lean_sys::lean_obj_res {
+/// #         unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
+/// #     }
+/// # }
+/// #
+/// # unsafe trait ParsingTypesModule: lean::Modules {}
+/// #
+/// # unsafe impl ParsingTypesModule for ParsingTypes {}
+/// #
+/// # enum YamlParser {}
+/// #
+/// # unsafe impl lean::Modules for YamlParser {
+/// #     unsafe fn initialize_modules(
+/// #         _builtin: u8,
+/// #         _lean_io_world: lean_sys::lean_obj_arg,
+/// #     ) -> lean_sys::lean_obj_res {
+/// #         unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
+/// #     }
+/// # }
+/// #
+/// # unsafe trait YamlParserModule: lean::Modules {}
+/// #
+/// # unsafe impl YamlParserModule for YamlParser {}
+/// #
+/// # #[create_module_trait]
+/// # enum JsonParserModuleInitializer {}
+/// #
+/// # unsafe impl lean::Modules for JsonParserModuleInitializer {
+/// #     unsafe fn initialize_modules(
+/// #         _builtin: u8,
+/// #         _lean_io_world: lean_sys::lean_obj_arg,
+/// #     ) -> lean_sys::lean_obj_res {
+/// #         unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
+/// #     }
+/// # }
+/// #
+/// combine_lean_module_initializers! {
+///     pub AllParsingModulesInitializer {
+///         ParsingTypes : ParsingTypesModule,
+///         YamlParser : YamlParserModule,
+///         JsonParserModuleInitializer, // Simplified because the type has a known suffix
+///     }
+/// }
+/// ```
 #[proc_macro]
 pub fn combine_lean_module_initializers(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let parsed_input = parse_macro_input!(input as CombineLeanModuleInitializers);

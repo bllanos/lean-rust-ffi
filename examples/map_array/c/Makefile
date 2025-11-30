@@ -21,10 +21,12 @@ $(OUT_DIR)/main: main.c lake | $(OUT_DIR)
 # Add library paths for Lake package and for Lean itself
 #
 # Note: How to find which library contains a given symbol:
-# ```
+#
+# ```bash
 # export SYMBOL=foo
 # find . -name \*.a -exec bash -c "nm --defined-only {} 2>/dev/null | grep $SYMBOL && echo {}" \;
 # ```
+#
 # (Reference: <https://stackoverflow.com/questions/19916119/how-do-i-find-where-a-symbol-is-defined-among-static-libraries>)
 #
 # Library paths are given explicitly below, instead of using `-l`,

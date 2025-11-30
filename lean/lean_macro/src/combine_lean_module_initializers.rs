@@ -11,49 +11,6 @@ use syn::{
 
 use lean_macro_internals::parse;
 
-/// Parses the following syntax:
-///
-/// ```text
-/// combine_lean_module_initializers! {
-///     $VISIBILITY $STRUCT_NAME {
-///         $MODULE_INITIALIZER_TYPE1 : $MODULE_TRAIT1,
-///         $MODULE_INITIALIZER_TYPE2 : $MODULE_TRAIT2,
-///         ...
-///         $MODULE_INITIALIZER_TYPEN : $MODULE_TRAITN(,)
-///     }
-/// }
-/// ```
-///
-/// Where `MODULE_INITIALIZER_TYPE` identifiers are types that implement
-/// `lean::Modules` and also implement the associated `MODULE_TRAIT` traits,
-/// which have `lean::Modules` as a supertrait.
-///
-/// For example:
-///
-/// ```text
-/// combine_lean_module_initializers! {
-///     pub AllParsingModulesInitializer {
-///         ParsingTypes : ParsingTypesModule,
-///         YamlParser : YamlParserModule,
-///         JsonParserModuleInitializer : JsonParser,
-///     }
-/// }
-/// ```
-///
-/// Module initializer types and module initialization traits can have arbitrary
-/// names, for flexibility. They do not need to follow the naming conventions
-/// imposed by other macros. If some module initializer types do follow the
-/// naming conventions, however, then the associated module initialization
-/// traits can be omitted. For example:
-///
-/// ```text
-/// combine_lean_module_initializers! {
-///     pub AllParsingModulesInitializer {
-///         ParsingTypes : ParsingTypesModule,
-///         YamlParser : YamlParserModule,
-///         JsonParserModuleInitializer, // Simplified because the type has a known suffix
-///     }
-/// }
 pub struct CombineLeanModuleInitializers {
     visibility: Visibility,
     name: Ident,
