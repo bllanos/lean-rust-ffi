@@ -4,13 +4,13 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-lean-sys = { path = "../../../../lean_sys" }
+lean-sys = { workspace = true }
 
 [build-dependencies]
 anyhow = { workspace = true }
-lean-build = { path = "../../../../lean_build" }
+lean-build = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
-lean = { path = "../../../../lean" }
+lean = { workspace = true }

@@ -3,10 +3,10 @@
  "packages":
  [{"type": "path",
    "scope": "",
-   "name": "map_array",
+   "name": "«map-array»",
    "manifestFile": "lake-manifest.json",
    "inherited": false,
    "dir": "../map_array",
    "configFile": "lakefile.toml"}],
- "name": "map_array_bin",
+ "name": "«map-array-bin»",
  "lakeDir": ".lake"}

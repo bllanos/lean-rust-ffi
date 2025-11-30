@@ -5,7 +5,7 @@ edition.workspace = true
 
 [dependencies]
 anyhow = { workspace = true }
-lean = { path = "../../../../lean" }
-lean-sys = { path = "../../../../lean_sys" }
-map-array = { path = "../map_array" }
-map-array-sys = { path = "../map_array_sys" }
+lean = { workspace = true }
+lean-sys = { workspace = true }
+map-array = { workspace = true }
+map-array-sys = { workspace = true }

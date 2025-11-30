@@ -1,4 +1,4 @@
-name = "map_array"
+name = "map-array"
 versionTags = []
 defaultTargets = ["MapArray"]
 licenseFiles = ["../../LICENSE-APACHE", "../../LICENSE-MIT"]

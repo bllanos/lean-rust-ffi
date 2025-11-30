@@ -1,4 +1,4 @@
-name = "map_array_bin"
+name = "map-array-bin"
 versionTags = []
 defaultTargets = ["main"]
 licenseFiles = ["../../LICENSE-APACHE", "../../LICENSE-MIT"]
@@ -8,5 +8,5 @@ name = "main"
 root = "Main"
 
 [[require]]
-name = "map_array"
+name = "map-array"
 path = "../map_array"

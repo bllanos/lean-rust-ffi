@@ -17,7 +17,7 @@ edition.workspace = true
 
 [build-dependencies]
 anyhow = { workspace = true }
-lean-build = { path = "../lean_build" }
+lean-build = { workspace = true }
 
 [dev-dependencies]
-lean = { path = "../lean" }
+lean = { workspace = true }

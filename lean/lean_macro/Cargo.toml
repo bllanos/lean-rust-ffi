@@ -1,5 +1,5 @@
 [package]
-name = "lean_macro"
+name = "lean-macro"
 version.workspace = true
 edition.workspace = true
 
@@ -7,11 +7,11 @@ edition.workspace = true
 proc-macro = true
 
 [dependencies]
-lean_macro_internals = { path = "../lean_macro_internals" }
+lean-macro-internals = { workspace = true }
 proc-macro2 = { workspace = true }
 quote = { workspace = true }
 syn = { workspace = true, features = ["derive"], default-features = false }
 
 [dev-dependencies]
-lean = { path = "..", features = ["macro"] }
-lean-sys = { path = "../../lean_sys" }
+lean = { workspace = true, features = ["macro"] }
+lean-sys = { workspace = true }

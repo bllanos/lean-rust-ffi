@@ -4,11 +4,11 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-lean_derive = { path = "./lean_derive", optional = true }
-lean_macro = { path = "./lean_macro", optional = true }
-lean-sys = { path = "../lean_sys" }
+lean-derive = { workspace = true, optional = true }
+lean-macro = { workspace = true, optional = true }
+lean-sys = { workspace = true }
 thiserror = { workspace = true }
 
 [features]
-derive = ["lean_derive"]
-macro = ["lean_macro"]
+derive = ["lean-derive"]
+macro = ["lean-macro"]

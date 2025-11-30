@@ -2,13 +2,13 @@ use std::error::Error;
 
 pub use lean_sys::{ELAN_TOOLCHAIN, LEAN_GITHASH, lean_obj_arg, lean_obj_res};
 
-// Re-export #[derive(Modules)]
-#[cfg(feature = "lean_derive")]
+// Re-export #[derive] macros
+#[cfg(feature = "lean-derive")]
 #[allow(unused_imports)]
 pub use lean_derive::*;
 
 // Re-export other procedural macros
-#[cfg(feature = "lean_macro")]
+#[cfg(feature = "lean-macro")]
 #[allow(unused_imports)]
 pub use lean_macro::*;
 

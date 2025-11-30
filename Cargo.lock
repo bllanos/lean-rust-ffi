@@ -166,9 +166,9 @@ dependencies = [
 name = "lean"
 version = "0.1.0"
 dependencies = [
+ "lean-derive",
+ "lean-macro",
  "lean-sys",
- "lean_derive",
- "lean_macro",
  "thiserror",
 ]
 
@@ -187,43 +187,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "lean-derive"
+version = "0.1.0"
+dependencies = [
+ "lean-macro-internals",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "lean-macro"
+version = "0.1.0"
+dependencies = [
+ "lean",
+ "lean-macro-internals",
+ "lean-sys",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "lean-macro-internals"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "lean-sys"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "lean",
  "lean-build",
-]
-
-[[package]]
-name = "lean_derive"
-version = "0.1.0"
-dependencies = [
- "lean_macro_internals",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "lean_macro"
-version = "0.1.0"
-dependencies = [
- "lean",
- "lean-sys",
- "lean_macro_internals",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "lean_macro_internals"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
