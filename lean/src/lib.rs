@@ -25,13 +25,10 @@ pub use error::{LeanError, LeanInitializationError, LeanIoError};
 pub use module::NoModules;
 pub use runtime::{
     ArgcError, LeanPackage, LeanPackageComponents, Minimal, MinimalComponents, RuntimeImpl,
-    RuntimeInitializationError, ThreadRuntimeImpl,
-    new_primary_thread_lean_runtime_with_default_error_handler_unchecked,
-    new_primary_thread_lean_sync_runtime_with_default_error_handler_unchecked, run_in_lean_runtime,
+    RuntimeInitializationError, ThreadRuntimeImpl, run_in_lean_runtime,
     run_in_lean_runtime_unchecked, run_in_lean_runtime_with_default_error_handler,
-    run_in_lean_runtime_with_default_error_handler_unchecked, run_in_lean_sync_runtime,
-    run_in_lean_sync_runtime_unchecked, run_in_lean_sync_runtime_with_default_error_handler,
-    run_in_lean_sync_runtime_with_default_error_handler_unchecked,
+    run_in_lean_sync_runtime, run_in_lean_sync_runtime_unchecked,
+    run_in_lean_sync_runtime_with_default_error_handler,
 };
 pub use thread::{
     run_in_custom_scoped_thread_with_lean_runtime, run_in_custom_thread_with_lean_runtime,

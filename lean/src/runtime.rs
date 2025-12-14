@@ -3,10 +3,7 @@ use std::sync::Once;
 
 use lean_sys::b_lean_obj_arg;
 
-use crate::{
-    LeanError, LeanInitializationError, LeanIoError, Modules, RuntimeComponents,
-    SyncRuntimeComponents,
-};
+use crate::{LeanError, LeanIoError, Modules, RuntimeComponents, SyncRuntimeComponents};
 
 mod components;
 mod runtime_impl;
@@ -77,111 +74,6 @@ pub unsafe fn run_in_lean_sync_runtime_unchecked<
             .map_err(LeanError::Initialization)?;
     let value = run(&runtime)?;
     Ok(value)
-}
-
-/// Initializes sets of Lean runtime components and modules and passes the
-/// runtime to a function that depends on Lean functionality
-///
-/// Uses [`LeanIoError::from_lean_io_error()`] to convert Lean module
-/// initialization errors to `LeanError`.
-///
-/// # Safety
-///
-/// Callers must either avoid initializing the Lean runtime multiple times, or
-/// must use runtime components that are safe to initialize multiple times.
-pub unsafe fn run_in_lean_runtime_with_default_error_handler_unchecked<
-    C: RuntimeComponents,
-    M: Modules,
-    T,
-    RunError: Error,
-    Run: FnOnce(&RuntimeImpl<C, M>) -> Result<T, RunError>,
->(
-    run: Run,
-) -> Result<T, LeanError<<C as RuntimeComponents>::InitializationError, LeanIoError, RunError>> {
-    unsafe {
-        run_in_lean_runtime_unchecked(
-            |lean_io_error| LeanIoError::from_lean_io_error(lean_io_error),
-            run,
-        )
-    }
-}
-
-/// Initializes sets of Lean runtime components and modules and passes the
-/// runtime to a function that depends on Lean functionality
-///
-/// Uses [`LeanIoError::from_lean_io_error()`] to convert Lean module
-/// initialization errors to `LeanError`.
-///
-/// # Safety
-///
-/// Callers must either avoid initializing the Lean runtime multiple times, or
-/// must use runtime components that are safe to initialize multiple times.
-pub unsafe fn run_in_lean_sync_runtime_with_default_error_handler_unchecked<
-    C: SyncRuntimeComponents,
-    M: Modules,
-    T,
-    RunError: Error,
-    Run: FnOnce(&ThreadRuntimeImpl<C, M>) -> Result<T, RunError>,
->(
-    run: Run,
-) -> Result<T, LeanError<<C as RuntimeComponents>::InitializationError, LeanIoError, RunError>> {
-    unsafe {
-        run_in_lean_sync_runtime_unchecked(
-            |lean_io_error| LeanIoError::from_lean_io_error(lean_io_error),
-            run,
-        )
-    }
-}
-
-/// Initializes sets of Lean runtime components and modules
-///
-/// Uses [`LeanIoError::from_lean_io_error()`] to convert Lean module
-/// initialization errors to `LeanError`.
-///
-/// This is a convenience wrapper around [`RuntimeImpl::new_primary_thread()`].
-///
-/// # Safety
-///
-/// Callers must either avoid initializing the Lean runtime multiple times, or
-/// must use runtime components that are safe to initialize multiple times.
-pub unsafe fn new_primary_thread_lean_runtime_with_default_error_handler_unchecked<
-    C: RuntimeComponents,
-    M: Modules,
->() -> Result<
-    RuntimeImpl<C, M>,
-    LeanInitializationError<<C as RuntimeComponents>::InitializationError, LeanIoError>,
-> {
-    unsafe {
-        RuntimeImpl::new_primary_thread(|lean_io_error| {
-            LeanIoError::from_lean_io_error(lean_io_error)
-        })
-    }
-}
-
-/// Initializes sets of Lean runtime components and modules
-///
-/// Uses [`LeanIoError::from_lean_io_error()`] to convert Lean module
-/// initialization errors to `LeanError`.
-///
-/// This is a convenience wrapper around
-/// [`ThreadRuntimeImpl::new_primary_thread()`].
-///
-/// # Safety
-///
-/// Callers must either avoid initializing the Lean runtime multiple times, or
-/// must use runtime components that are safe to initialize multiple times.
-pub unsafe fn new_primary_thread_lean_sync_runtime_with_default_error_handler_unchecked<
-    C: SyncRuntimeComponents,
-    M: Modules,
->() -> Result<
-    ThreadRuntimeImpl<C, M>,
-    LeanInitializationError<<C as RuntimeComponents>::InitializationError, LeanIoError>,
-> {
-    unsafe {
-        ThreadRuntimeImpl::new_primary_thread(|lean_io_error| {
-            LeanIoError::from_lean_io_error(lean_io_error)
-        })
-    }
 }
 
 /// Initializes sets of Lean runtime components and modules and passes the
@@ -269,9 +161,6 @@ pub fn run_in_lean_sync_runtime<
 /// been called. The runtime is single-use to eliminate overhead from repeatedly
 /// checking whether it has already been initialized. There is no need to call
 /// this function multiple times in the same program.
-///
-/// See also [`run_in_lean_runtime_with_default_error_handler_unchecked()`] which
-/// does not panic but delegates repeated initialization checks to the caller.
 pub fn run_in_lean_runtime_with_default_error_handler<
     C: RuntimeComponents,
     M: Modules,
@@ -300,10 +189,6 @@ pub fn run_in_lean_runtime_with_default_error_handler<
 /// been called. The runtime is single-use to eliminate overhead from repeatedly
 /// checking whether it has already been initialized. There is no need to call
 /// this function multiple times in the same program.
-///
-/// See also [`run_in_lean_sync_runtime_with_default_error_handler_unchecked()`]
-/// which does not panic but delegates repeated initialization checks to the
-/// caller.
 pub fn run_in_lean_sync_runtime_with_default_error_handler<
     C: SyncRuntimeComponents,
     M: Modules,
