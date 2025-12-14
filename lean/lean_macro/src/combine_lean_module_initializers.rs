@@ -124,7 +124,7 @@ impl ToTokens for ModuleInitializer {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
         let module_initializer = &self.0;
         let generated = quote! {
-          result = #module_initializer::initialize_modules(builtin, lean_io_world);
+          result = #module_initializer::initialize_modules(builtin);
           if ::lean_sys::lean_io_result_is_ok(result) {
               ::lean_sys::lean_dec(result);
           } else {
@@ -160,7 +160,7 @@ pub fn generate(input: CombineLeanModuleInitializers) -> TokenStream2 {
         #visibility enum #name {}
 
         unsafe impl ::lean::Modules for #name {
-            unsafe fn initialize_modules(builtin: u8, lean_io_world: ::lean_sys::lean_obj_arg) -> ::lean_sys::lean_obj_res {
+            unsafe fn initialize_modules(builtin: u8) -> ::lean_sys::lean_obj_res {
               let mut result: *mut ::lean_sys::lean_object;
               #(#module_initializers)*
               result

@@ -152,7 +152,7 @@ pub unsafe trait Modules {
     ///
     /// Callers must ensure that the Lean runtime has been initialized before
     /// calling this function.
-    unsafe fn initialize_modules(builtin: u8, lean_io_world: lean_obj_arg) -> lean_obj_res;
+    unsafe fn initialize_modules(builtin: u8) -> lean_obj_res;
 }
 
 /// A set of initialized Lean runtime features and Lean modules

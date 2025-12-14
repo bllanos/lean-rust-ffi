@@ -6,9 +6,7 @@ use std::str::FromStr;
 use lean::{
     LeanError, LeanInitializationError, LeanIoError, MimallocAllocator, MinimalComponents, Modules,
 };
-use lean_sys::{
-    lean_io_result_mk_error, lean_mk_io_user_error, lean_mk_string, lean_obj_arg, lean_obj_res,
-};
+use lean_sys::{lean_io_result_mk_error, lean_mk_io_user_error, lean_mk_string, lean_obj_res};
 
 #[global_allocator]
 static ALLOCATOR: MimallocAllocator = MimallocAllocator {};
@@ -20,7 +18,7 @@ impl TestModule {
 }
 
 unsafe impl Modules for TestModule {
-    unsafe fn initialize_modules(_builtin: u8, _lean_io_world: lean_obj_arg) -> lean_obj_res {
+    unsafe fn initialize_modules(_builtin: u8) -> lean_obj_res {
         let cstring = CString::from_str(Self::ERROR_MESSAGE).unwrap();
         let cstring_ptr = cstring.as_ptr();
 

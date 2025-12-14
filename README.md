@@ -1,10 +1,8 @@
-<!-- omit from toc -->
-# Integrating Lean and Rust
+# Integrating Lean and Rust <!-- omit from toc -->
 
 This repository contains Rust [crates](https://doc.rust-lang.org/book/ch07-01-packages-and-crates.html#packages-and-crates) for using Lean's runtime and Lean libraries in Rust programs, and provides example programs combining the two languages.
 
-<!-- omit from toc -->
-## Table of contents
+## Table of contents <!-- omit from toc -->
 
 - [Setup](#setup)
   - [Other useful tools](#other-useful-tools)
@@ -42,8 +40,8 @@ This repository contains Rust [crates](https://doc.rust-lang.org/book/ch07-01-pa
    This project does not have a well-known set of compatible Lean versions. At the time of writing, the Lean version used was:
 
    ```text
-   leanprover/lean4:v4.23.0
-   Lean (version 4.23.0, x86_64-unknown-linux-gnu, commit 50aaf682e9b74ab92880292a25c68baa1cc81c87, Release)
+   leanprover/lean4:v4.26.0
+   Lean (version 4.26.0, x86_64-unknown-linux-gnu, commit d8204c9fd894f91bbb2cdfec5912ec8196fd8562, Release)
    ```
 
 3. Install system dependencies of `bindgen`: <https://rust-lang.github.io/rust-bindgen/requirements.html>
@@ -165,7 +163,6 @@ This low-level program depends on the following Rust crates from this project:
 1. [`lean-build`](lean_build) contains utilities for writing the [build scripts](https://doc.rust-lang.org/cargo/reference/build-scripts.html) of `*-sys` crates that use Lean and Lean libraries.
 
    `lean-build` helps with:
-
    1. Finding and linking to Lean library files for the Lean runtime and for custom Lean libraries.
    2. Defining Rust equivalents of the types and functions in the C code output by Lean's compiler. We do so using [`bindgen`](https://rust-lang.github.io/rust-bindgen/).
    3. Ensuring that Cargo automatically rebuilds Lean and Rust code whenever there the Lean toolchain version Lean code change.
@@ -219,7 +216,7 @@ The code in this repository might assist with developing Lean libraries that dep
 
 Writing Lean libraries that depend on Rust code is undesirable from two perspectives:
 
-1. Lean's formal verification tools cannot reason about code in other languages. Rust code could make Lean libraries unsound. A related idea is the [F* language's lattice of computational effects](https://fstar-lang.org/papers/mumon/paper.pdf) where pure, total functions cannot depend on partial or divergent functions.
+1. Lean's formal verification tools cannot reason about code in other languages. Rust code could make Lean libraries unsound. A related idea is the [F\* language's lattice of computational effects](https://fstar-lang.org/papers/mumon/paper.pdf) where pure, total functions cannot depend on partial or divergent functions.
 
 2. Rust is an ideal language for writing runtime infrastructure that connects logic with the real world. Runtime infrastructure should have a one-way dependency on the abstract logic of a program, according to architecture patterns such as the [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html).
 
@@ -234,7 +231,6 @@ A program written in a functional programming language combines a pure functiona
 2. Customizing the runtime provides a greater level of control over how a program executes, and allows parts of the runtime to be removed if it is known that the program will not use them.
 
 3. Programs need to perform operations ("side effects") that are difficult to model as pure functions. Functional programming languages introduce abstractions to help manage side effects, such as [monads](https://lean-lang.org/functional_programming_in_lean/Monads/Summary), [algebraic effects](https://koka-lang.github.io/koka/doc/book.html#why-handlers), and [graded types](https://granule-project.github.io/granule.html). Unfortunately, these abstractions are sometimes:
-
    1. Difficult to understand
 
    2. Contagious, affecting the entire language or large portions of code that do not directly perform side effects

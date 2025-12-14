@@ -49,7 +49,6 @@ pub fn create_module_trait(
 /// # unsafe impl lean::Modules for ParsingTypes {
 /// #     unsafe fn initialize_modules(
 /// #         _builtin: u8,
-/// #         _lean_io_world: lean_sys::lean_obj_arg,
 /// #     ) -> lean_sys::lean_obj_res {
 /// #         unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
 /// #     }
@@ -64,7 +63,6 @@ pub fn create_module_trait(
 /// # unsafe impl lean::Modules for YamlParser {
 /// #     unsafe fn initialize_modules(
 /// #         _builtin: u8,
-/// #         _lean_io_world: lean_sys::lean_obj_arg,
 /// #     ) -> lean_sys::lean_obj_res {
 /// #         unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
 /// #     }
@@ -80,7 +78,6 @@ pub fn create_module_trait(
 /// # unsafe impl lean::Modules for JsonParserModuleInitializer {
 /// #     unsafe fn initialize_modules(
 /// #         _builtin: u8,
-/// #         _lean_io_world: lean_sys::lean_obj_arg,
 /// #     ) -> lean_sys::lean_obj_res {
 /// #         unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
 /// #     }
@@ -114,7 +111,6 @@ pub fn create_module_trait(
 /// # unsafe impl lean::Modules for ParsingTypes {
 /// #     unsafe fn initialize_modules(
 /// #         _builtin: u8,
-/// #         _lean_io_world: lean_sys::lean_obj_arg,
 /// #     ) -> lean_sys::lean_obj_res {
 /// #         unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
 /// #     }
@@ -129,7 +125,6 @@ pub fn create_module_trait(
 /// # unsafe impl lean::Modules for YamlParser {
 /// #     unsafe fn initialize_modules(
 /// #         _builtin: u8,
-/// #         _lean_io_world: lean_sys::lean_obj_arg,
 /// #     ) -> lean_sys::lean_obj_res {
 /// #         unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
 /// #     }
@@ -145,7 +140,6 @@ pub fn create_module_trait(
 /// # unsafe impl lean::Modules for JsonParserModuleInitializer {
 /// #     unsafe fn initialize_modules(
 /// #         _builtin: u8,
-/// #         _lean_io_world: lean_sys::lean_obj_arg,
 /// #     ) -> lean_sys::lean_obj_res {
 /// #         unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
 /// #     }

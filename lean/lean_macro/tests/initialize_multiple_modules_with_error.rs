@@ -13,10 +13,7 @@ static GLOBAL_INITIALIZATION_STATE: AtomicUsize = AtomicUsize::new(0);
 enum OneModuleInitializer {}
 
 unsafe impl lean::Modules for OneModuleInitializer {
-    unsafe fn initialize_modules(
-        _builtin: u8,
-        _lean_io_world: lean_sys::lean_obj_arg,
-    ) -> lean_sys::lean_obj_res {
+    unsafe fn initialize_modules(_builtin: u8) -> lean_sys::lean_obj_res {
         GLOBAL_INITIALIZATION_STATE.fetch_add(1, Ordering::Relaxed);
         let cstring = CString::from_str(Self::ERROR_MESSAGE).unwrap();
         let cstring_ptr = cstring.as_ptr();
@@ -37,10 +34,7 @@ impl OneModuleInitializer {
 enum TwoModuleInitializer {}
 
 unsafe impl lean::Modules for TwoModuleInitializer {
-    unsafe fn initialize_modules(
-        _builtin: u8,
-        _lean_io_world: lean_sys::lean_obj_arg,
-    ) -> lean_sys::lean_obj_res {
+    unsafe fn initialize_modules(_builtin: u8) -> lean_sys::lean_obj_res {
         unreachable!()
     }
 }
@@ -60,7 +54,7 @@ fn assert_module_initialization_error<T: OneModule + TwoModule>() {
 
     let error;
     unsafe {
-        res = T::initialize_modules(builtin, lean_sys::lean_io_mk_world());
+        res = T::initialize_modules(builtin);
         assert!(!lean_sys::lean_io_result_is_ok(res));
         error = LeanIoError::from_lean_io_result(res);
         lean_sys::lean_dec(res);

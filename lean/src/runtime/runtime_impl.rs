@@ -2,8 +2,8 @@ use std::error::Error;
 use std::marker::PhantomData;
 
 use lean_sys::{
-    b_lean_obj_arg, lean_dec, lean_io_mk_world, lean_io_result_get_error, lean_io_result_is_ok,
-    lean_obj_res, lean_object,
+    b_lean_obj_arg, lean_dec, lean_io_result_get_error, lean_io_result_is_ok, lean_obj_res,
+    lean_object,
 };
 
 use crate::{LeanInitializationError, Modules, Runtime, RuntimeComponents, sync::NonSendNonSync};
@@ -36,7 +36,7 @@ impl<C: RuntimeComponents, M: Modules> RuntimeImpl<C, M> {
         let builtin: u8 = 1;
 
         unsafe {
-            res = M::initialize_modules(builtin, lean_io_mk_world());
+            res = M::initialize_modules(builtin);
             if lean_io_result_is_ok(res) {
                 lean_dec(res);
                 Ok(())

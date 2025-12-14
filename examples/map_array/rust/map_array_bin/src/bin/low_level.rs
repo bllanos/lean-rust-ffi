@@ -6,9 +6,8 @@ use lean::MimallocAllocator;
 use lean_sys::{
     ELAN_TOOLCHAIN, lean_alloc_array, lean_array_cptr, lean_array_size, lean_box_uint32, lean_dec,
     lean_dec_ref, lean_finalize_task_manager, lean_inc, lean_init_task_manager,
-    lean_initialize_runtime_module, lean_io_mark_end_initialization, lean_io_mk_world,
-    lean_io_result_is_ok, lean_io_result_show_error, lean_object, lean_setup_args,
-    lean_string_cstr, lean_unbox_uint32,
+    lean_initialize_runtime_module, lean_io_mark_end_initialization, lean_io_result_is_ok,
+    lean_io_result_show_error, lean_object, lean_setup_args, lean_string_cstr, lean_unbox_uint32,
 };
 use map_array_sys::{
     MapArray::Basic_c::{map_options_to_string, mk_map_options, my_map},
@@ -54,7 +53,7 @@ fn main() -> anyhow::Result<()> {
     let builtin: u8 = 1;
 
     unsafe {
-        res = initialize_MapArray(builtin, lean_io_mk_world());
+        res = initialize_MapArray(builtin);
         if lean_io_result_is_ok(res) {
             lean_dec(res);
         } else {
