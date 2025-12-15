@@ -1,0 +1,7 @@
+name = "pure_lean"
+version = "0.1.0"
+defaultTargets = ["sequential"]
+
+[[lean_exe]]
+name = "sequential"
+root = "Sequential"
