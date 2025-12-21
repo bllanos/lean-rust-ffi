@@ -7,5 +7,9 @@ buildType = "release"
 defaultFacets = ["static"]
 
 [[lean_exe]]
+name = "concurrent"
+root = "Concurrent"
+
+[[lean_exe]]
 name = "sequential"
 root = "Sequential"

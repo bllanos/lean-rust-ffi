@@ -1,3 +1,4 @@
+import Std.Internal.Async
 import Std.Internal.Async.Timer
 import Std.Time
 
