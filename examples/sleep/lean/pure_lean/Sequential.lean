@@ -1,16 +1,10 @@
-import Std.Internal.Async.Timer
-import Std.Time
+import Sleeper
 
-open Std.Internal.IO.Async (Async sleep)
-open Std.Time
+open Sleeper (blockAndPrint formatElapsedTime sleepAndPrint)
 
-def secondsDurationRange := [0:5]
-
-def waitThenPrint (x : Nat) : Async Unit := do
-  sleep (Millisecond.Offset.ofSeconds (Second.Offset.ofNat x))
-  IO.println s!"Counted {x} seconds"
+def secondsDurationRange := [0:6]
 
 def main : IO Unit := do
-  let action := secondsDurationRange.forM waitThenPrint
-  Async.block action
-  pure ()
+  IO.println "Sequential sleep operations"
+  let action := secondsDurationRange.forM Sleeper.sleepAndPrint
+  blockAndPrint action
