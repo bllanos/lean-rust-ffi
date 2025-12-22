@@ -7,19 +7,19 @@ open Std.Time
 
 namespace Sleeper
 
-def formatElapsedTime (startTime: Nat) (endTime: Nat) :
+def formatElapsedTime (startTimeMilliseconds: Nat) (endTimeMilliseconds: Nat) :
     Second.Offset × Millisecond.Offset :=
-  let elapsedTime := Millisecond.Offset.ofNat (endTime - startTime)
+  let elapsedTime := Millisecond.Offset.ofNat (endTimeMilliseconds - startTimeMilliseconds)
   let elapsedTimeSeconds := elapsedTime.toSeconds
   let elapsedTimeRemainder := elapsedTime - elapsedTimeSeconds
   (elapsedTimeSeconds, elapsedTimeRemainder)
 
-def sleepAndPrint (x : Nat) : Async Unit := do
+def sleepAndPrint (sleepDurationSeconds : Nat) : Async Unit := do
   let startTime ← IO.monoMsNow
-  sleep (Millisecond.Offset.ofSeconds (Second.Offset.ofNat x))
+  sleep (Millisecond.Offset.ofSeconds (Second.Offset.ofNat sleepDurationSeconds))
   let endTime ← IO.monoMsNow
   let (elapsedTimeSeconds, elapsedTimeRemainder) := formatElapsedTime startTime endTime
-  IO.println s!"Called sleep for {x} seconds (actual sleep duration {elapsedTimeSeconds}.{elapsedTimeRemainder} seconds)"
+  IO.println s!"Called sleep for {sleepDurationSeconds} seconds (actual sleep duration {elapsedTimeSeconds}.{elapsedTimeRemainder} seconds)"
 
 def blockAndPrint (action: Async Unit) : IO Unit := do
   let startTime ← IO.monoMsNow
