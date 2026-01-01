@@ -19,13 +19,13 @@ def sleepAndPrint (sleepDurationSeconds : Nat) : Async Unit := do
   sleep (Millisecond.Offset.ofSeconds (Second.Offset.ofNat sleepDurationSeconds))
   let endTime ← IO.monoMsNow
   let (elapsedTimeSeconds, elapsedTimeRemainder) := formatElapsedTime startTime endTime
-  IO.println s!"Called sleep for {sleepDurationSeconds} seconds (actual sleep duration {elapsedTimeSeconds}.{elapsedTimeRemainder} seconds)"
+  IO.println s!"Called sleep for {sleepDurationSeconds} seconds (actual sleep duration {elapsedTimeSeconds} seconds {elapsedTimeRemainder} milliseconds)"
 
 def blockAndPrint (action: Async Unit) : IO Unit := do
   let startTime ← IO.monoMsNow
   Async.block action
   let endTime ← IO.monoMsNow
   let (elapsedTimeSeconds, elapsedTimeRemainder) := formatElapsedTime startTime endTime
-  IO.println s!"Total duration {elapsedTimeSeconds}.{elapsedTimeRemainder} seconds"
+  IO.println s!"Total duration {elapsedTimeSeconds} seconds {elapsedTimeRemainder} milliseconds"
 
 end Sleeper
