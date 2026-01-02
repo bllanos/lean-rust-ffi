@@ -7,40 +7,46 @@ use crate::{
     sleep::{self, ConcurrentOrder, Sleep},
 };
 
+/// A trait bound on the type parameter of [`AsyncIo`] that ensures that
+/// [`AsyncIo`] itself satisfies these traits
+pub trait AsyncIoValue: 'static + Clone + Send + Sync {}
+
+impl<T: 'static + Clone + Send + Sync> AsyncIoValue for T {}
+
 #[derive(Clone)]
-struct DeferredEffect<T: 'static + Clone> {
+struct DeferredEffect<T: AsyncIoValue> {
     sleep: Sleep,
-    next: Arc<dyn Fn() -> AsyncIoInner<T> + 'static>,
+    next: Arc<dyn Fn() -> AsyncIoInner<T> + 'static + Send + Sync>,
 }
 
 #[derive(Clone)]
-struct DeferredValue<T: 'static + Clone> {
+struct DeferredValue<T: AsyncIoValue> {
     value: T,
-    next: Arc<dyn Fn(T) -> AsyncIoInner<T> + 'static>,
+    next: Arc<dyn Fn(T) -> AsyncIoInner<T> + 'static + Send + Sync>,
 }
 
 #[derive(Clone)]
-struct DeferredIo<T: 'static + Clone> {
-    io: Arc<dyn BaseIo<Arc<dyn Any>> + 'static>,
-    next: Arc<dyn Fn(Arc<dyn Any>) -> AsyncIoInner<T> + 'static>,
+struct DeferredIo<T: AsyncIoValue> {
+    io: Arc<dyn BaseIo<Arc<dyn Any + Send + Sync>> + 'static + Send + Sync>,
+    next: Arc<dyn Fn(Arc<dyn Any>) -> AsyncIoInner<T> + 'static + Send + Sync>,
 }
 
 #[derive(Clone)]
-enum AsyncIoInner<T: 'static + Clone> {
+enum AsyncIoInner<T: AsyncIoValue> {
     Effect(DeferredEffect<T>),
     Io(DeferredIo<T>),
     Value(DeferredValue<T>),
     None,
 }
 
-impl<T: 'static + Clone> DeferredEffect<T> {
+impl<T: AsyncIoValue> DeferredEffect<T> {
     pub fn next(self) -> AsyncIoInner<T> {
         let Self { sleep, next } = self;
         sleep::run(sleep);
         (next)()
     }
 
-    pub fn concurrently<U: 'static + Clone>(
+    pub fn concurrently<U: AsyncIoValue>(
         self,
         y: AsyncIoInner<U>,
     ) -> AsyncIoInner<(Option<T>, Option<U>)> {
@@ -104,7 +110,7 @@ impl<T: 'static + Clone> DeferredEffect<T> {
     }
 }
 
-impl<T: 'static + Clone> DeferredValue<T> {
+impl<T: AsyncIoValue> DeferredValue<T> {
     pub fn pure(value: T) -> Self {
         Self {
             value,
@@ -117,7 +123,7 @@ impl<T: 'static + Clone> DeferredValue<T> {
         (next)(value)
     }
 
-    pub fn concurrently<U: 'static + Clone>(
+    pub fn concurrently<U: AsyncIoValue>(
         self,
         y: AsyncIoInner<U>,
     ) -> AsyncIoInner<(Option<T>, Option<U>)> {
@@ -149,14 +155,14 @@ impl<T: 'static + Clone> DeferredValue<T> {
     }
 }
 
-impl<T: 'static + Clone> DeferredIo<T> {
+impl<T: AsyncIoValue> DeferredIo<T> {
     pub fn next(self) -> AsyncIoInner<T> {
         let Self { io, next } = self;
         let value = io();
         (next)(value)
     }
 
-    pub fn concurrently<U: 'static + Clone>(
+    pub fn concurrently<U: AsyncIoValue>(
         self,
         y: AsyncIoInner<U>,
     ) -> AsyncIoInner<(Option<T>, Option<U>)> {
@@ -200,8 +206,8 @@ impl<T: 'static + Clone> DeferredIo<T> {
     }
 }
 
-impl<T: 'static + Clone> DeferredIo<T> {
-    pub fn of_base_io<F: BaseIo<T> + 'static>(io_effect: F) -> Self {
+impl<T: AsyncIoValue> DeferredIo<T> {
+    pub fn of_base_io<F: BaseIo<T> + 'static + Send + Sync>(io_effect: F) -> Self {
         Self {
             io: Arc::new(move || {
                 let value = io_effect();
@@ -220,12 +226,12 @@ impl<T: 'static + Clone> DeferredIo<T> {
     }
 }
 
-impl<T: 'static + Clone> AsyncIoInner<T> {
+impl<T: AsyncIoValue> AsyncIoInner<T> {
     pub fn pure(value: T) -> Self {
         Self::Value(DeferredValue::pure(value))
     }
 
-    pub fn of_base_io<F: BaseIo<T> + 'static>(io_effect: F) -> Self {
+    pub fn of_base_io<F: BaseIo<T> + 'static + Send + Sync>(io_effect: F) -> Self {
         Self::Io(DeferredIo::of_base_io(io_effect))
     }
 
@@ -249,7 +255,7 @@ impl<T: 'static + Clone> AsyncIoInner<T> {
         }
     }
 
-    pub fn bind<U: 'static + Clone, F: Fn(T) -> AsyncIoInner<U> + 'static + Clone>(
+    pub fn bind<U: AsyncIoValue, F: Fn(T) -> AsyncIoInner<U> + AsyncIoValue>(
         self,
         f: F,
     ) -> AsyncIoInner<U> {
@@ -268,7 +274,7 @@ impl<T: 'static + Clone> AsyncIoInner<T> {
         }
     }
 
-    pub fn map<U: 'static + Clone, F: Fn(T) -> U + 'static + Clone>(self, f: F) -> AsyncIoInner<U> {
+    pub fn map<U: AsyncIoValue, F: Fn(T) -> U + AsyncIoValue>(self, f: F) -> AsyncIoInner<U> {
         match self {
             Self::Effect(effect) => AsyncIoInner::Effect(DeferredEffect {
                 sleep: effect.sleep,
@@ -317,7 +323,7 @@ impl<T: 'static + Clone> AsyncIoInner<T> {
         }
     }
 
-    pub fn for_m<U: 'static + Clone, I, F>(collection: I, f: F) -> Self
+    pub fn for_m<U: AsyncIoValue, I, F>(collection: I, f: F) -> Self
     where
         I: IntoIterator<Item = U>,
         F: Fn(U) -> Self,
@@ -333,7 +339,7 @@ impl<T: 'static + Clone> AsyncIoInner<T> {
         effect.unwrap_or(Self::None)
     }
 
-    pub fn concurrently<U: 'static + Clone>(
+    pub fn concurrently<U: AsyncIoValue>(
         x: Self,
         y: AsyncIoInner<U>,
     ) -> AsyncIoInner<(Option<T>, Option<U>)> {
@@ -362,25 +368,22 @@ impl From<Sleep> for AsyncIoInner<()> {
 }
 
 #[derive(Clone)]
-pub struct AsyncIo<T: 'static + Clone>(AsyncIoInner<T>);
+pub struct AsyncIo<T: AsyncIoValue>(AsyncIoInner<T>);
 
-impl<T: 'static + Clone> AsyncIo<T> {
+impl<T: AsyncIoValue> AsyncIo<T> {
     pub fn pure(value: T) -> Self {
         Self(AsyncIoInner::pure(value))
     }
 
-    pub fn of_base_io<F: BaseIo<T> + 'static>(io_effect: F) -> Self {
+    pub fn of_base_io<F: BaseIo<T> + 'static + Send + Sync>(io_effect: F) -> Self {
         Self(AsyncIoInner::of_base_io(io_effect))
     }
 
-    pub fn bind<U: 'static + Clone, F: Fn(T) -> AsyncIo<U> + 'static + Clone>(
-        self,
-        f: F,
-    ) -> AsyncIo<U> {
+    pub fn bind<U: AsyncIoValue, F: Fn(T) -> AsyncIo<U> + AsyncIoValue>(self, f: F) -> AsyncIo<U> {
         AsyncIo(self.0.bind(move |value| f(value).0))
     }
 
-    pub fn map<U: 'static + Clone, F: Fn(T) -> U + 'static + Clone>(self, f: F) -> AsyncIo<U> {
+    pub fn map<U: AsyncIoValue, F: Fn(T) -> U + AsyncIoValue>(self, f: F) -> AsyncIo<U> {
         AsyncIo(self.0.map(f))
     }
 
@@ -388,7 +391,7 @@ impl<T: 'static + Clone> AsyncIo<T> {
         self.0.block()
     }
 
-    pub fn for_m<U: 'static + Clone, I, F>(collection: I, f: F) -> Self
+    pub fn for_m<U: AsyncIoValue, I, F>(collection: I, f: F) -> Self
     where
         I: IntoIterator<Item = U>,
         F: Fn(U) -> Self,
@@ -396,7 +399,7 @@ impl<T: 'static + Clone> AsyncIo<T> {
         Self(AsyncIoInner::for_m(collection, move |value| f(value).0))
     }
 
-    pub fn concurrently<U: 'static + Clone>(
+    pub fn concurrently<U: AsyncIoValue>(
         x: Self,
         y: AsyncIo<U>,
     ) -> AsyncIo<(Option<T>, Option<U>)> {

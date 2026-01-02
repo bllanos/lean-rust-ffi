@@ -2,7 +2,7 @@ use std::fmt::Display;
 use std::time::{Duration, Instant};
 
 use async_effect::{
-    async_io::AsyncIo,
+    async_io::{AsyncIo, AsyncIoValue},
     io::{self, BaseIo},
 };
 
@@ -14,7 +14,7 @@ fn format_elapsed_time(start_time: Instant, end_time: Instant) -> (u64, u128) {
     (elapsed_time_seconds, elapsed_time_remainder)
 }
 
-pub fn sleep_and_print<N: 'static + Copy + Display + Into<u64>>(
+pub fn sleep_and_print<N: AsyncIoValue + Copy + Display + Into<u64>>(
     sleep_duration_seconds: N,
 ) -> AsyncIo<()> {
     let start_time_effect = AsyncIo::of_base_io(io::monotonic_now());
