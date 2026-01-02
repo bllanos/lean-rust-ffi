@@ -2,9 +2,14 @@ import Sleeper
 
 open Sleeper (blockAndPrint formatElapsedTime sleepAndPrint)
 
-def secondsDurationRange := [0:6]
+def maximumSleepTimeSeconds : Nat := 6
+
+def secondsDurationRange := [0:maximumSleepTimeSeconds]
 
 def main : IO Unit := do
   IO.println "Sequential sleep operations"
-  let action := secondsDurationRange.forM Sleeper.sleepAndPrint
+  let ascendingAction := secondsDurationRange.forM Sleeper.sleepAndPrint
+  let descendingAction := secondsDurationRange.forM fun x =>
+    (Sleeper.sleepAndPrint (maximumSleepTimeSeconds - x))
+  let action := ascendingAction >>= fun () => descendingAction
   blockAndPrint action
