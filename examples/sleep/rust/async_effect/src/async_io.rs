@@ -53,7 +53,7 @@ impl<T: AsyncIoValue> DeferredEffect<T> {
         match y {
             AsyncIoInner::Effect(effect) => match Sleep::concurrently(self.sleep, effect.sleep) {
                 ConcurrentOrder::Equal(sleep) => AsyncIoInner::Effect(DeferredEffect {
-                    sleep: sleep,
+                    sleep,
                     next: Arc::new(move || {
                         let first = (self.next.clone())();
                         let second = (effect.next.clone())();
@@ -429,14 +429,14 @@ impl From<Sleep> for AsyncIo<()> {
 
 impl AsyncIo<()> {
     pub fn sleep(sleep_duration: Duration) -> Self {
-        Sleep::sleep(sleep_duration).into()
+        Sleep::new(sleep_duration).into()
     }
 
     pub fn sleep_from_milliseconds<N: Into<u64>>(sleep_duration_milliseconds: N) -> Self {
-        Sleep::sleep_from_milliseconds(sleep_duration_milliseconds).into()
+        Sleep::from_milliseconds(sleep_duration_milliseconds).into()
     }
 
     pub fn sleep_from_seconds<N: Into<u64>>(sleep_duration_seconds: N) -> Self {
-        Sleep::sleep_from_seconds(sleep_duration_seconds).into()
+        Sleep::from_seconds(sleep_duration_seconds).into()
     }
 }

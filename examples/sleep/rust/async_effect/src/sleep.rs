@@ -15,16 +15,16 @@ pub struct Sleep {
 }
 
 impl Sleep {
-    pub fn sleep(sleep_duration: Duration) -> Self {
+    pub fn new(sleep_duration: Duration) -> Self {
         Self { sleep_duration }
     }
 
-    pub fn sleep_from_seconds<N: Into<u64>>(sleep_duration_seconds: N) -> Self {
-        Self::sleep(Duration::from_secs(sleep_duration_seconds.into()))
+    pub fn from_seconds<N: Into<u64>>(sleep_duration_seconds: N) -> Self {
+        Self::new(Duration::from_secs(sleep_duration_seconds.into()))
     }
 
-    pub fn sleep_from_milliseconds<N: Into<u64>>(sleep_duration_milliseconds: N) -> Self {
-        Self::sleep(Duration::from_millis(sleep_duration_milliseconds.into()))
+    pub fn from_milliseconds<N: Into<u64>>(sleep_duration_milliseconds: N) -> Self {
+        Self::new(Duration::from_millis(sleep_duration_milliseconds.into()))
     }
 
     pub fn concurrently(first: Sleep, second: Sleep) -> ConcurrentOrder {
