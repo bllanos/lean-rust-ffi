@@ -1,5 +1,4 @@
 use std::process::ExitCode;
-use std::sync::Arc;
 use std::time::Instant;
 
 /// An IO monad is a state monad
@@ -12,14 +11,6 @@ use std::time::Instant;
 pub trait BaseIo<T>: Fn() -> T {}
 
 impl<T, F: Fn() -> T> BaseIo<T> for F {}
-
-pub fn from_arc<T, F: BaseIo<T>>(f: Arc<F>) -> impl BaseIo<T> + Clone {
-    move || (*f)()
-}
-
-pub fn arc<T, F: BaseIo<T>>(f: F) -> impl BaseIo<T> + Clone {
-    from_arc(Arc::new(f))
-}
 
 pub fn println<T: AsRef<str>>(s: T) -> impl BaseIo<()> {
     move || {
