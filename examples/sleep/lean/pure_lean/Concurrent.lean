@@ -6,7 +6,9 @@ open Std.Internal.IO.Async (Async)
 
 open Sleeper (blockAndPrint formatElapsedTime sleepAndPrint)
 
-def secondsDurationRange := [0:6]
+def maximumSleepTimeSeconds : Nat := 6
+
+def secondsDurationRange := [0:maximumSleepTimeSeconds]
 
 def main : IO Unit := do
   IO.println "Concurrent sleep operations"
@@ -17,3 +19,13 @@ def main : IO Unit := do
       let _ ← Async.concurrently action (Sleeper.sleepAndPrint i)
 
   blockAndPrint action
+
+  IO.println "Concurrent sleep operations concurrent with sequential sleep operations"
+
+  let ascendingAction := secondsDurationRange.forM Sleeper.sleepAndPrint
+  let descendingAction := secondsDurationRange.forM fun x =>
+    (Sleeper.sleepAndPrint (maximumSleepTimeSeconds - x))
+  let allAction := do
+    let _ ← Async.concurrentlyAll #[action, ascendingAction, descendingAction]
+  blockAndPrint allAction
+  pure ()
