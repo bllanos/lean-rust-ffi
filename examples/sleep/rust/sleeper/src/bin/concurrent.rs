@@ -15,7 +15,23 @@ fn main() -> impl Termination {
         for i in SECONDS_DURATION_RANGE {
             action = AsyncIo::concurrently(action, sleep_and_print(i)).bind(|_| AsyncIo::pure(()));
         }
-        let io_effect = block_and_print(action);
+        let io_effect = block_and_print(action.clone());
+
+        let io_effect = io::bind(io_effect, |_| {
+            io::println("Concurrent sleep operations concurrent with sequential sleep operations")
+        });
+        let io_effect = io::bind(io_effect, move |_| {
+            let ascending_action = AsyncIo::for_m(SECONDS_DURATION_RANGE, sleep_and_print);
+            let descending_action = AsyncIo::for_m(SECONDS_DURATION_RANGE, |x| {
+                sleep_and_print(MAXIMUM_SLEEP_TIME_SECONDS - x)
+            });
+            let all_action =
+                AsyncIo::concurrently_all([action.clone(), ascending_action, descending_action])
+                    .bind(|_| AsyncIo::pure(()));
+
+            block_and_print(all_action)
+        });
+
         io::bind(io_effect, |_| io::pure_copy(ExitCode::SUCCESS))
     });
     io::run(io_effect)

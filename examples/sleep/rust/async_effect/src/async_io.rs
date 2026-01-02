@@ -402,6 +402,20 @@ impl<T: 'static + Clone> AsyncIo<T> {
     ) -> AsyncIo<(Option<T>, Option<U>)> {
         AsyncIo(AsyncIoInner::concurrently(x.0, y.0))
     }
+
+    pub fn concurrently_all<I: IntoIterator<Item = Self>>(
+        collection: I,
+    ) -> AsyncIo<Vec<Option<T>>> {
+        let mut action: AsyncIo<Vec<Option<T>>> = AsyncIo::pure(Vec::new());
+        for item in collection {
+            action = AsyncIo::concurrently(action, item).map(|(v_option, value)| {
+                let mut v = v_option.unwrap_or_default();
+                v.push(value);
+                v
+            });
+        }
+        action
+    }
 }
 
 impl From<Sleep> for AsyncIo<()> {
