@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use crate::{
     io::BaseIo,
-    sleep::{self, Sleep},
+    sleep::{self, ConcurrentOrder, Sleep},
 };
 
 #[derive(Clone)]
@@ -21,8 +21,8 @@ struct DeferredValue<T: 'static + Clone> {
 
 #[derive(Clone)]
 struct DeferredIo<T: 'static + Clone> {
-    io: Arc<dyn BaseIo<Box<dyn Any>> + 'static>,
-    next: Arc<dyn Fn(Box<dyn Any>) -> AsyncIoInner<T> + 'static>,
+    io: Arc<dyn BaseIo<Arc<dyn Any>> + 'static>,
+    next: Arc<dyn Fn(Arc<dyn Any>) -> AsyncIoInner<T> + 'static>,
 }
 
 #[derive(Clone)]
@@ -39,6 +39,69 @@ impl<T: 'static + Clone> DeferredEffect<T> {
         sleep::run(sleep);
         (next)()
     }
+
+    pub fn concurrently<U: 'static + Clone>(
+        self,
+        y: AsyncIoInner<U>,
+    ) -> AsyncIoInner<(Option<T>, Option<U>)> {
+        match y {
+            AsyncIoInner::Effect(effect) => match Sleep::concurrently(self.sleep, effect.sleep) {
+                ConcurrentOrder::Equal(sleep) => AsyncIoInner::Effect(DeferredEffect {
+                    sleep: sleep,
+                    next: Arc::new(move || {
+                        let first = (self.next.clone())();
+                        let second = (effect.next.clone())();
+                        AsyncIoInner::concurrently(first, second)
+                    }),
+                }),
+                ConcurrentOrder::SameOrder(first_sleep, second_sleep) => {
+                    AsyncIoInner::Effect(DeferredEffect {
+                        sleep: first_sleep,
+                        next: Arc::new(move || {
+                            let first = (self.next.clone())();
+                            AsyncIoInner::concurrently(
+                                first,
+                                AsyncIoInner::Effect(DeferredEffect {
+                                    sleep: second_sleep,
+                                    next: effect.next.clone(),
+                                }),
+                            )
+                        }),
+                    })
+                }
+                ConcurrentOrder::ReverseOrder(first_sleep, second_sleep) => {
+                    AsyncIoInner::Effect(DeferredEffect {
+                        sleep: first_sleep,
+                        next: Arc::new(move || {
+                            let second = (effect.next.clone())();
+                            AsyncIoInner::concurrently(
+                                AsyncIoInner::Effect(DeferredEffect {
+                                    sleep: second_sleep,
+                                    next: self.next.clone(),
+                                }),
+                                second,
+                            )
+                        }),
+                    })
+                }
+            },
+            AsyncIoInner::Io(effect) => AsyncIoInner::Io(DeferredIo {
+                io: effect.io,
+                next: Arc::new(move |io_value| {
+                    let second = (effect.next.clone())(io_value);
+                    AsyncIoInner::concurrently(AsyncIoInner::Effect(self.clone()), second)
+                }),
+            }),
+            AsyncIoInner::Value(effect) => AsyncIoInner::Value(DeferredValue {
+                value: (None, Some(effect.value.clone())),
+                next: Arc::new(move |(_, second_value)| {
+                    let second = (effect.next.clone())(second_value.unwrap());
+                    AsyncIoInner::concurrently(AsyncIoInner::Effect(self.clone()), second)
+                }),
+            }),
+            AsyncIoInner::None => AsyncIoInner::Effect(self).map(|first| (Some(first), None)),
+        }
+    }
 }
 
 impl<T: 'static + Clone> DeferredValue<T> {
@@ -53,6 +116,37 @@ impl<T: 'static + Clone> DeferredValue<T> {
         let Self { value, next } = self;
         (next)(value)
     }
+
+    pub fn concurrently<U: 'static + Clone>(
+        self,
+        y: AsyncIoInner<U>,
+    ) -> AsyncIoInner<(Option<T>, Option<U>)> {
+        match y {
+            AsyncIoInner::Effect(effect) => AsyncIoInner::Value(DeferredValue {
+                value: (Some(self.value.clone()), None),
+                next: Arc::new(move |(first_value, _)| {
+                    let first = (self.next.clone())(first_value.unwrap());
+                    AsyncIoInner::concurrently(first, AsyncIoInner::Effect(effect.clone()))
+                }),
+            }),
+            AsyncIoInner::Io(effect) => AsyncIoInner::Value(DeferredValue {
+                value: (Some(self.value.clone()), None),
+                next: Arc::new(move |(first_value, _)| {
+                    let first = (self.next.clone())(first_value.unwrap());
+                    AsyncIoInner::concurrently(first, AsyncIoInner::Io(effect.clone()))
+                }),
+            }),
+            AsyncIoInner::Value(effect) => AsyncIoInner::Value(DeferredValue {
+                value: (Some(self.value.clone()), Some(effect.value.clone())),
+                next: Arc::new(move |(first_value, second_value)| {
+                    let first = (self.next.clone())(first_value.unwrap());
+                    let second = (effect.next.clone())(second_value.unwrap());
+                    AsyncIoInner::concurrently(first, second)
+                }),
+            }),
+            AsyncIoInner::None => AsyncIoInner::Value(self).map(|first| (Some(first), None)),
+        }
+    }
 }
 
 impl<T: 'static + Clone> DeferredIo<T> {
@@ -61,6 +155,49 @@ impl<T: 'static + Clone> DeferredIo<T> {
         let value = io();
         (next)(value)
     }
+
+    pub fn concurrently<U: 'static + Clone>(
+        self,
+        y: AsyncIoInner<U>,
+    ) -> AsyncIoInner<(Option<T>, Option<U>)> {
+        match y {
+            AsyncIoInner::Effect(effect) => AsyncIoInner::Io(DeferredIo {
+                io: self.io,
+                next: Arc::new(move |io_value| {
+                    let first = (self.next.clone())(io_value);
+                    AsyncIoInner::concurrently(first, AsyncIoInner::Effect(effect.clone()))
+                }),
+            }),
+            AsyncIoInner::Io(effect) => AsyncIoInner::Io(DeferredIo {
+                io: Arc::new(move || {
+                    let first_value = (self.io.clone())();
+                    let second_value = (effect.io.clone())();
+                    Arc::new((first_value, second_value))
+                }),
+                next: Arc::new(move |io_arc_pair| {
+                    let io_any_pair: &dyn Any = &*io_arc_pair;
+                    match io_any_pair.downcast_ref::<(Arc<dyn Any>, Arc<dyn Any>)>() {
+                        Some((first_io_arc_value, second_io_arc_value)) => {
+                            let first = (self.next.clone())(first_io_arc_value.clone());
+                            let second = (effect.next.clone())(second_io_arc_value.clone());
+                            AsyncIoInner::concurrently(first, second)
+                        }
+                        None => {
+                            unreachable!();
+                        }
+                    }
+                }),
+            }),
+            AsyncIoInner::Value(effect) => AsyncIoInner::Io(DeferredIo {
+                io: self.io,
+                next: Arc::new(move |io_value| {
+                    let first = (self.next.clone())(io_value);
+                    AsyncIoInner::concurrently(first, AsyncIoInner::Value(effect.clone()))
+                }),
+            }),
+            AsyncIoInner::None => AsyncIoInner::Io(self).map(|first| (Some(first), None)),
+        }
+    }
 }
 
 impl<T: 'static + Clone> DeferredIo<T> {
@@ -68,10 +205,10 @@ impl<T: 'static + Clone> DeferredIo<T> {
         Self {
             io: Arc::new(move || {
                 let value = io_effect();
-                Box::new(value)
+                Arc::new(value)
             }),
-            next: Arc::new(|io_boxed_value| {
-                let io_any_value: &dyn Any = &*io_boxed_value;
+            next: Arc::new(|io_arc_value| {
+                let io_any_value: &dyn Any = &*io_arc_value;
                 match io_any_value.downcast_ref::<T>() {
                     Some(io_value) => AsyncIoInner::pure(io_value.clone()),
                     None => {
@@ -195,6 +332,18 @@ impl<T: 'static + Clone> AsyncIoInner<T> {
         }
         effect.unwrap_or(Self::None)
     }
+
+    pub fn concurrently<U: 'static + Clone>(
+        x: Self,
+        y: AsyncIoInner<U>,
+    ) -> AsyncIoInner<(Option<T>, Option<U>)> {
+        match x {
+            Self::Effect(effect) => effect.concurrently(y),
+            Self::Io(effect) => effect.concurrently(y),
+            Self::Value(effect) => effect.concurrently(y),
+            Self::None => y.map(|second| (None, Some(second))),
+        }
+    }
 }
 
 impl From<Sleep> for DeferredEffect<()> {
@@ -245,6 +394,13 @@ impl<T: 'static + Clone> AsyncIo<T> {
         F: Fn(U) -> Self,
     {
         Self(AsyncIoInner::for_m(collection, move |value| f(value).0))
+    }
+
+    pub fn concurrently<U: 'static + Clone>(
+        x: Self,
+        y: AsyncIo<U>,
+    ) -> AsyncIo<(Option<T>, Option<U>)> {
+        AsyncIo(AsyncIoInner::concurrently(x.0, y.0))
     }
 }
 
