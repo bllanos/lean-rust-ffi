@@ -174,15 +174,16 @@ impl<T: AsyncIoValue> DeferredIo<T> {
                     AsyncIoInner::concurrently(first, AsyncIoInner::Effect(effect.clone()))
                 }),
             }),
-            AsyncIoInner::Io(effect) => AsyncIoInner::Io(DeferredIo {
-                io: Arc::new(move || {
-                    let first_value = (self.io.clone())();
-                    let second_value = (effect.io.clone())();
-                    Arc::new((first_value, second_value))
-                }),
-                next: Arc::new(move |io_arc_pair| {
-                    let io_any_pair: &dyn Any = &*io_arc_pair;
-                    match io_any_pair.downcast_ref::<(Arc<dyn Any>, Arc<dyn Any>)>() {
+            AsyncIoInner::Io(effect) => {
+                AsyncIoInner::Io(DeferredIo {
+                    io: Arc::new(move || {
+                        let first_value = (self.io.clone())();
+                        let second_value = (effect.io.clone())();
+                        Arc::new((first_value, second_value))
+                    }),
+                    next: Arc::new(move |io_arc_pair| {
+                        let io_any_pair: &dyn Any = &*io_arc_pair;
+                        match io_any_pair.downcast_ref::<(Arc<dyn Any + Send + Sync>, Arc<dyn Any + Send + Sync>)>() {
                         Some((first_io_arc_value, second_io_arc_value)) => {
                             let first = (self.next.clone())(first_io_arc_value.clone());
                             let second = (effect.next.clone())(second_io_arc_value.clone());
@@ -192,8 +193,9 @@ impl<T: AsyncIoValue> DeferredIo<T> {
                             unreachable!();
                         }
                     }
-                }),
-            }),
+                    }),
+                })
+            }
             AsyncIoInner::Value(effect) => AsyncIoInner::Io(DeferredIo {
                 io: self.io,
                 next: Arc::new(move |io_value| {
