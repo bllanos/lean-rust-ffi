@@ -9,85 +9,82 @@ use crate::{
 
 /// A trait bound on the type parameter of [`AsyncIo`] that ensures that
 /// [`AsyncIo`] itself satisfies these traits
-pub trait AsyncIoValue: 'static + Clone + Send + Sync {}
+pub trait Value: 'static + Clone + Send + Sync {}
 
-impl<T: 'static + Clone + Send + Sync> AsyncIoValue for T {}
+impl<T: 'static + Clone + Send + Sync> Value for T {}
 
 pub trait Callback: 'static + Send + Sync {}
 
 impl<F: 'static + Send + Sync> Callback for F {}
 
-trait EffectCallback<T: AsyncIoValue>: Fn() -> AsyncIoInner<T> + Callback {}
+trait EffectCallback<T: Value>: Fn() -> Inner<T> + Callback {}
 
-impl<T: AsyncIoValue, F: Fn() -> AsyncIoInner<T> + Callback> EffectCallback<T> for F {}
+impl<T: Value, F: Fn() -> Inner<T> + Callback> EffectCallback<T> for F {}
 
-trait ValueCallback<T: AsyncIoValue>: Fn(T) -> AsyncIoInner<T> + Callback {}
+trait ValueCallback<T: Value>: Fn(T) -> Inner<T> + Callback {}
 
-impl<T: AsyncIoValue, F: Fn(T) -> AsyncIoInner<T> + Callback> ValueCallback<T> for F {}
+impl<T: Value, F: Fn(T) -> Inner<T> + Callback> ValueCallback<T> for F {}
 
 trait IoAction: BaseIo<Arc<dyn Any + Send + Sync>> + Callback {}
 
 impl<F: BaseIo<Arc<dyn Any + Send + Sync>> + Callback> IoAction for F {}
 
-trait IoCallback<T: AsyncIoValue>: Fn(Arc<dyn Any>) -> AsyncIoInner<T> + Callback {}
+trait IoCallback<T: Value>: Fn(Arc<dyn Any>) -> Inner<T> + Callback {}
 
-impl<T: AsyncIoValue, F: Fn(Arc<dyn Any>) -> AsyncIoInner<T> + Callback> IoCallback<T> for F {}
+impl<T: Value, F: Fn(Arc<dyn Any>) -> Inner<T> + Callback> IoCallback<T> for F {}
 
 #[derive(Clone)]
-struct DeferredEffect<T: AsyncIoValue> {
+struct DeferredEffect<T: Value> {
     sleep: Sleep,
     next: Arc<dyn EffectCallback<T>>,
 }
 
 #[derive(Clone)]
-struct DeferredValue<T: AsyncIoValue> {
+struct DeferredValue<T: Value> {
     value: T,
     next: Arc<dyn ValueCallback<T>>,
 }
 
 #[derive(Clone)]
-struct DeferredIo<T: AsyncIoValue> {
+struct DeferredIo<T: Value> {
     io: Arc<dyn IoAction>,
     next: Arc<dyn IoCallback<T>>,
 }
 
 #[derive(Clone)]
-enum AsyncIoInner<T: AsyncIoValue> {
+enum Inner<T: Value> {
     Effect(DeferredEffect<T>),
     Io(DeferredIo<T>),
     Value(DeferredValue<T>),
     None,
 }
 
-impl<T: AsyncIoValue> DeferredEffect<T> {
-    pub fn next(self) -> AsyncIoInner<T> {
+impl<T: Value> DeferredEffect<T> {
+    pub fn next(self) -> Inner<T> {
         let Self { sleep, next } = self;
         sleep::run(sleep);
         (next)()
     }
 
-    pub fn concurrently<U: AsyncIoValue>(
-        self,
-        y: AsyncIoInner<U>,
-    ) -> AsyncIoInner<(Option<T>, Option<U>)> {
+    pub fn concurrently<U: Value>(self, y: Inner<U>) -> Inner<(Option<T>, Option<U>)> {
         match y {
-            AsyncIoInner::Effect(effect) => match Sleep::concurrently(self.sleep, effect.sleep) {
-                ConcurrentOrder::Equal(sleep) => AsyncIoInner::Effect(DeferredEffect {
+            Inner::Effect(effect) => match Sleep::concurrently(self.sleep, effect.sleep) {
+                ConcurrentOrder::Equal(sleep) => Inner::Effect(DeferredEffect {
                     sleep,
                     next: Arc::new(move || {
                         let first = (self.next.clone())();
                         let second = (effect.next.clone())();
-                        AsyncIoInner::concurrently(first, second)
+                        Inner::concurrently(first, second)
                     }),
                 }),
                 ConcurrentOrder::SameOrder(first_sleep, second_sleep) => {
-                    AsyncIoInner::Effect(DeferredEffect {
+                    Inner::Effect(DeferredEffect {
                         sleep: first_sleep,
                         next: Arc::new(move || {
                             let first = (self.next.clone())();
-                            AsyncIoInner::concurrently(
+                            Inner::concurrently(
                                 first,
-                                AsyncIoInner::Effect(DeferredEffect {
+                                Inner::Effect(DeferredEffect {
                                     sleep: second_sleep,
                                     next: effect.next.clone(),
                                 }),
@@ -96,12 +93,12 @@ impl<T: AsyncIoValue> DeferredEffect<T> {
                     })
                 }
                 ConcurrentOrder::ReverseOrder(first_sleep, second_sleep) => {
-                    AsyncIoInner::Effect(DeferredEffect {
+                    Inner::Effect(DeferredEffect {
                         sleep: first_sleep,
                         next: Arc::new(move || {
                             let second = (effect.next.clone())();
-                            AsyncIoInner::concurrently(
-                                AsyncIoInner::Effect(DeferredEffect {
+                            Inner::concurrently(
+                                Inner::Effect(DeferredEffect {
                                     sleep: second_sleep,
                                     next: self.next.clone(),
                                 }),
@@ -111,91 +108,85 @@ impl<T: AsyncIoValue> DeferredEffect<T> {
                     })
                 }
             },
-            AsyncIoInner::Io(effect) => AsyncIoInner::Io(DeferredIo {
+            Inner::Io(effect) => Inner::Io(DeferredIo {
                 io: effect.io,
                 next: Arc::new(move |io_value| {
                     let second = (effect.next.clone())(io_value);
-                    AsyncIoInner::concurrently(AsyncIoInner::Effect(self.clone()), second)
+                    Inner::concurrently(Inner::Effect(self.clone()), second)
                 }),
             }),
-            AsyncIoInner::Value(effect) => AsyncIoInner::Value(DeferredValue {
+            Inner::Value(effect) => Inner::Value(DeferredValue {
                 value: (None, Some(effect.value.clone())),
                 next: Arc::new(move |(_, second_value)| {
                     let second = (effect.next.clone())(second_value.unwrap());
-                    AsyncIoInner::concurrently(AsyncIoInner::Effect(self.clone()), second)
+                    Inner::concurrently(Inner::Effect(self.clone()), second)
                 }),
             }),
-            AsyncIoInner::None => AsyncIoInner::Effect(self).map(|first| (Some(first), None)),
+            Inner::None => Inner::Effect(self).map(|first| (Some(first), None)),
         }
     }
 }
 
-impl<T: AsyncIoValue> DeferredValue<T> {
+impl<T: Value> DeferredValue<T> {
     pub fn pure(value: T) -> Self {
         Self {
             value,
-            next: Arc::new(|_| AsyncIoInner::None),
+            next: Arc::new(|_| Inner::None),
         }
     }
 
-    pub fn next(self) -> AsyncIoInner<T> {
+    pub fn next(self) -> Inner<T> {
         let Self { value, next } = self;
         (next)(value)
     }
 
-    pub fn concurrently<U: AsyncIoValue>(
-        self,
-        y: AsyncIoInner<U>,
-    ) -> AsyncIoInner<(Option<T>, Option<U>)> {
+    pub fn concurrently<U: Value>(self, y: Inner<U>) -> Inner<(Option<T>, Option<U>)> {
         match y {
-            AsyncIoInner::Effect(effect) => AsyncIoInner::Value(DeferredValue {
+            Inner::Effect(effect) => Inner::Value(DeferredValue {
                 value: (Some(self.value.clone()), None),
                 next: Arc::new(move |(first_value, _)| {
                     let first = (self.next.clone())(first_value.unwrap());
-                    AsyncIoInner::concurrently(first, AsyncIoInner::Effect(effect.clone()))
+                    Inner::concurrently(first, Inner::Effect(effect.clone()))
                 }),
             }),
-            AsyncIoInner::Io(effect) => AsyncIoInner::Value(DeferredValue {
+            Inner::Io(effect) => Inner::Value(DeferredValue {
                 value: (Some(self.value.clone()), None),
                 next: Arc::new(move |(first_value, _)| {
                     let first = (self.next.clone())(first_value.unwrap());
-                    AsyncIoInner::concurrently(first, AsyncIoInner::Io(effect.clone()))
+                    Inner::concurrently(first, Inner::Io(effect.clone()))
                 }),
             }),
-            AsyncIoInner::Value(effect) => AsyncIoInner::Value(DeferredValue {
+            Inner::Value(effect) => Inner::Value(DeferredValue {
                 value: (Some(self.value.clone()), Some(effect.value.clone())),
                 next: Arc::new(move |(first_value, second_value)| {
                     let first = (self.next.clone())(first_value.unwrap());
                     let second = (effect.next.clone())(second_value.unwrap());
-                    AsyncIoInner::concurrently(first, second)
+                    Inner::concurrently(first, second)
                 }),
             }),
-            AsyncIoInner::None => AsyncIoInner::Value(self).map(|first| (Some(first), None)),
+            Inner::None => Inner::Value(self).map(|first| (Some(first), None)),
         }
     }
 }
 
-impl<T: AsyncIoValue> DeferredIo<T> {
-    pub fn next(self) -> AsyncIoInner<T> {
+impl<T: Value> DeferredIo<T> {
+    pub fn next(self) -> Inner<T> {
         let Self { io, next } = self;
         let value = io();
         (next)(value)
     }
 
-    pub fn concurrently<U: AsyncIoValue>(
-        self,
-        y: AsyncIoInner<U>,
-    ) -> AsyncIoInner<(Option<T>, Option<U>)> {
+    pub fn concurrently<U: Value>(self, y: Inner<U>) -> Inner<(Option<T>, Option<U>)> {
         match y {
-            AsyncIoInner::Effect(effect) => AsyncIoInner::Io(DeferredIo {
+            Inner::Effect(effect) => Inner::Io(DeferredIo {
                 io: self.io,
                 next: Arc::new(move |io_value| {
                     let first = (self.next.clone())(io_value);
-                    AsyncIoInner::concurrently(first, AsyncIoInner::Effect(effect.clone()))
+                    Inner::concurrently(first, Inner::Effect(effect.clone()))
                 }),
             }),
-            AsyncIoInner::Io(effect) => {
-                AsyncIoInner::Io(DeferredIo {
+            Inner::Io(effect) => {
+                Inner::Io(DeferredIo {
                     io: Arc::new(move || {
                         let first_value = (self.io.clone())();
                         let second_value = (effect.io.clone())();
@@ -207,7 +198,7 @@ impl<T: AsyncIoValue> DeferredIo<T> {
                         Some((first_io_arc_value, second_io_arc_value)) => {
                             let first = (self.next.clone())(first_io_arc_value.clone());
                             let second = (effect.next.clone())(second_io_arc_value.clone());
-                            AsyncIoInner::concurrently(first, second)
+                            Inner::concurrently(first, second)
                         }
                         None => {
                             unreachable!();
@@ -216,19 +207,19 @@ impl<T: AsyncIoValue> DeferredIo<T> {
                     }),
                 })
             }
-            AsyncIoInner::Value(effect) => AsyncIoInner::Io(DeferredIo {
+            Inner::Value(effect) => Inner::Io(DeferredIo {
                 io: self.io,
                 next: Arc::new(move |io_value| {
                     let first = (self.next.clone())(io_value);
-                    AsyncIoInner::concurrently(first, AsyncIoInner::Value(effect.clone()))
+                    Inner::concurrently(first, Inner::Value(effect.clone()))
                 }),
             }),
-            AsyncIoInner::None => AsyncIoInner::Io(self).map(|first| (Some(first), None)),
+            Inner::None => Inner::Io(self).map(|first| (Some(first), None)),
         }
     }
 }
 
-impl<T: AsyncIoValue> DeferredIo<T> {
+impl<T: Value> DeferredIo<T> {
     pub fn of_base_io<F: BaseIo<T> + Callback>(io_effect: F) -> Self {
         Self {
             io: Arc::new(move || {
@@ -238,7 +229,7 @@ impl<T: AsyncIoValue> DeferredIo<T> {
             next: Arc::new(|io_arc_value| {
                 let io_any_value: &dyn Any = &*io_arc_value;
                 match io_any_value.downcast_ref::<T>() {
-                    Some(io_value) => AsyncIoInner::pure(io_value.clone()),
+                    Some(io_value) => Inner::pure(io_value.clone()),
                     None => {
                         unreachable!();
                     }
@@ -248,7 +239,7 @@ impl<T: AsyncIoValue> DeferredIo<T> {
     }
 }
 
-impl<T: AsyncIoValue> AsyncIoInner<T> {
+impl<T: Value> Inner<T> {
     pub fn pure(value: T) -> Self {
         Self::Value(DeferredValue::pure(value))
     }
@@ -277,40 +268,37 @@ impl<T: AsyncIoValue> AsyncIoInner<T> {
         }
     }
 
-    pub fn bind<U: AsyncIoValue, F: Fn(T) -> AsyncIoInner<U> + AsyncIoValue>(
-        self,
-        f: F,
-    ) -> AsyncIoInner<U> {
+    pub fn bind<U: Value, F: Fn(T) -> Inner<U> + Value>(self, f: F) -> Inner<U> {
         match self {
-            Self::Effect(effect) => AsyncIoInner::Effect(DeferredEffect {
+            Self::Effect(effect) => Inner::Effect(DeferredEffect {
                 sleep: effect.sleep,
                 next: Arc::new(move || (effect.next.clone())().bind(f.clone())),
             }),
-            Self::Io(effect) => AsyncIoInner::Io(DeferredIo {
+            Self::Io(effect) => Inner::Io(DeferredIo {
                 io: effect.io,
                 next: Arc::new(move |io_value| (effect.next.clone())(io_value).bind(f.clone())),
             }),
             Self::Value(effect) => ((f.clone())(effect.value.clone()))
                 .union(((effect.next.clone())(effect.value.clone())).bind(f.clone())),
-            Self::None => AsyncIoInner::None,
+            Self::None => Inner::None,
         }
     }
 
-    pub fn map<U: AsyncIoValue, F: Fn(T) -> U + AsyncIoValue>(self, f: F) -> AsyncIoInner<U> {
+    pub fn map<U: Value, F: Fn(T) -> U + Value>(self, f: F) -> Inner<U> {
         match self {
-            Self::Effect(effect) => AsyncIoInner::Effect(DeferredEffect {
+            Self::Effect(effect) => Inner::Effect(DeferredEffect {
                 sleep: effect.sleep,
                 next: Arc::new(move || (effect.next.clone())().map(f.clone())),
             }),
-            Self::Io(effect) => AsyncIoInner::Io(DeferredIo {
+            Self::Io(effect) => Inner::Io(DeferredIo {
                 io: effect.io,
                 next: Arc::new(move |io_value| (effect.next.clone())(io_value).map(f.clone())),
             }),
-            Self::Value(effect) => AsyncIoInner::Value(DeferredValue {
+            Self::Value(effect) => Inner::Value(DeferredValue {
                 value: (f.clone())(effect.value.clone()),
                 next: Arc::new(move |_| (effect.next.clone())(effect.value.clone()).map(f.clone())),
             }),
-            Self::None => AsyncIoInner::None,
+            Self::None => Inner::None,
         }
     }
 
@@ -345,7 +333,7 @@ impl<T: AsyncIoValue> AsyncIoInner<T> {
         }
     }
 
-    pub fn for_m<U: AsyncIoValue, I, F>(collection: I, f: F) -> Self
+    pub fn for_m<U: Value, I, F>(collection: I, f: F) -> Self
     where
         I: IntoIterator<Item = U>,
         F: Fn(U) -> Self,
@@ -361,10 +349,7 @@ impl<T: AsyncIoValue> AsyncIoInner<T> {
         effect.unwrap_or(Self::None)
     }
 
-    pub fn concurrently<U: AsyncIoValue>(
-        x: Self,
-        y: AsyncIoInner<U>,
-    ) -> AsyncIoInner<(Option<T>, Option<U>)> {
+    pub fn concurrently<U: Value>(x: Self, y: Inner<U>) -> Inner<(Option<T>, Option<U>)> {
         match x {
             Self::Effect(effect) => effect.concurrently(y),
             Self::Io(effect) => effect.concurrently(y),
@@ -378,34 +363,34 @@ impl From<Sleep> for DeferredEffect<()> {
     fn from(sleep: Sleep) -> Self {
         Self {
             sleep,
-            next: Arc::new(|| AsyncIoInner::pure(())),
+            next: Arc::new(|| Inner::pure(())),
         }
     }
 }
 
-impl From<Sleep> for AsyncIoInner<()> {
+impl From<Sleep> for Inner<()> {
     fn from(sleep: Sleep) -> Self {
         Self::Effect(sleep.into())
     }
 }
 
 #[derive(Clone)]
-pub struct AsyncIo<T: AsyncIoValue>(AsyncIoInner<T>);
+pub struct AsyncIo<T: Value>(Inner<T>);
 
-impl<T: AsyncIoValue> AsyncIo<T> {
+impl<T: Value> AsyncIo<T> {
     pub fn pure(value: T) -> Self {
-        Self(AsyncIoInner::pure(value))
+        Self(Inner::pure(value))
     }
 
     pub fn of_base_io<F: BaseIo<T> + Callback>(io_effect: F) -> Self {
-        Self(AsyncIoInner::of_base_io(io_effect))
+        Self(Inner::of_base_io(io_effect))
     }
 
-    pub fn bind<U: AsyncIoValue, F: Fn(T) -> AsyncIo<U> + AsyncIoValue>(self, f: F) -> AsyncIo<U> {
+    pub fn bind<U: Value, F: Fn(T) -> AsyncIo<U> + Value>(self, f: F) -> AsyncIo<U> {
         AsyncIo(self.0.bind(move |value| f(value).0))
     }
 
-    pub fn map<U: AsyncIoValue, F: Fn(T) -> U + AsyncIoValue>(self, f: F) -> AsyncIo<U> {
+    pub fn map<U: Value, F: Fn(T) -> U + Value>(self, f: F) -> AsyncIo<U> {
         AsyncIo(self.0.map(f))
     }
 
@@ -413,19 +398,16 @@ impl<T: AsyncIoValue> AsyncIo<T> {
         self.0.block()
     }
 
-    pub fn for_m<U: AsyncIoValue, I, F>(collection: I, f: F) -> Self
+    pub fn for_m<U: Value, I, F>(collection: I, f: F) -> Self
     where
         I: IntoIterator<Item = U>,
         F: Fn(U) -> Self,
     {
-        Self(AsyncIoInner::for_m(collection, move |value| f(value).0))
+        Self(Inner::for_m(collection, move |value| f(value).0))
     }
 
-    pub fn concurrently<U: AsyncIoValue>(
-        x: Self,
-        y: AsyncIo<U>,
-    ) -> AsyncIo<(Option<T>, Option<U>)> {
-        AsyncIo(AsyncIoInner::concurrently(x.0, y.0))
+    pub fn concurrently<U: Value>(x: Self, y: AsyncIo<U>) -> AsyncIo<(Option<T>, Option<U>)> {
+        AsyncIo(Inner::concurrently(x.0, y.0))
     }
 
     pub fn concurrently_all<I: IntoIterator<Item = Self>>(
@@ -467,7 +449,7 @@ impl AsyncIo<()> {
 mod tests {
     use super::*;
 
-    fn enforce_trait_bounds<T: AsyncIoValue>(value: T) -> T {
+    fn enforce_trait_bounds<T: Value>(value: T) -> T {
         value
     }
 
