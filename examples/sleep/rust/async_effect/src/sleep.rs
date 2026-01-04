@@ -46,6 +46,9 @@ impl Sleep {
     }
 }
 
+/// Evaluate a sleep effect
+///
+/// Evaluation should only be done inside an IO effect ([`crate::io::BaseIo`])
 pub fn run(sleep: Sleep) {
     if !sleep.sleep_duration.is_zero() {
         thread::sleep(sleep.sleep_duration);

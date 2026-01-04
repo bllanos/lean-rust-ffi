@@ -9,9 +9,13 @@ use crate::{
 
 /// A trait bound on the type parameter of [`AsyncIo`] that ensures that
 /// [`AsyncIo`] itself satisfies these traits
-pub trait Value: 'static + Clone + Send + Sync {}
+pub trait Value: 'static + Any + Clone + Send + Sync {}
 
-impl<T: 'static + Clone + Send + Sync> Value for T {}
+impl<T: 'static + Any + Clone + Send + Sync> Value for T {}
+
+trait DynamicValue: Any + Send + Sync {}
+
+impl<T: Any + Send + Sync> DynamicValue for T {}
 
 pub trait Callback: 'static + Send + Sync {}
 
@@ -21,17 +25,13 @@ trait EffectCallback<T: Value>: Fn() -> Inner<T> + Callback {}
 
 impl<T: Value, F: Fn() -> Inner<T> + Callback> EffectCallback<T> for F {}
 
-trait ValueCallback<T: Value>: Fn(T) -> Inner<T> + Callback {}
+trait ValueCallback<T: Value>: Fn(Arc<dyn DynamicValue>) -> Inner<T> + Callback {}
 
-impl<T: Value, F: Fn(T) -> Inner<T> + Callback> ValueCallback<T> for F {}
+impl<T: Value, F: Fn(Arc<dyn DynamicValue>) -> Inner<T> + Callback> ValueCallback<T> for F {}
 
-trait IoAction: BaseIo<Arc<dyn Any + Send + Sync>> + Callback {}
+trait IoAction: BaseIo<Arc<dyn DynamicValue>> + Callback {}
 
-impl<F: BaseIo<Arc<dyn Any + Send + Sync>> + Callback> IoAction for F {}
-
-trait IoCallback<T: Value>: Fn(Arc<dyn Any>) -> Inner<T> + Callback {}
-
-impl<T: Value, F: Fn(Arc<dyn Any>) -> Inner<T> + Callback> IoCallback<T> for F {}
+impl<F: BaseIo<Arc<dyn DynamicValue>> + Callback> IoAction for F {}
 
 #[derive(Clone)]
 struct DeferredEffect<T: Value> {
@@ -40,23 +40,31 @@ struct DeferredEffect<T: Value> {
 }
 
 #[derive(Clone)]
-struct DeferredValue<T: Value> {
-    value: T,
+struct DeferredIo<T: Value> {
+    io: Arc<dyn IoAction>,
     next: Arc<dyn ValueCallback<T>>,
 }
 
 #[derive(Clone)]
-struct DeferredIo<T: Value> {
-    io: Arc<dyn IoAction>,
-    next: Arc<dyn IoCallback<T>>,
+struct DeferredBind<T: Value> {
+    value: Arc<dyn DynamicValue>,
+    next: Arc<dyn ValueCallback<T>>,
+}
+
+/// A pure value
+///
+/// All effect chains end in values
+#[derive(Clone)]
+struct Pure<T: Value> {
+    value: T,
 }
 
 #[derive(Clone)]
 enum Inner<T: Value> {
     Effect(DeferredEffect<T>),
     Io(DeferredIo<T>),
-    Value(DeferredValue<T>),
-    None,
+    Bind(DeferredBind<T>),
+    Pure(Pure<T>),
 }
 
 impl<T: Value> DeferredEffect<T> {
@@ -66,7 +74,7 @@ impl<T: Value> DeferredEffect<T> {
         (next)()
     }
 
-    pub fn concurrently<U: Value>(self, y: Inner<U>) -> Inner<(Option<T>, Option<U>)> {
+    pub fn concurrently<U: Value>(self, y: Inner<U>) -> Inner<(T, U)> {
         match y {
             Inner::Effect(effect) => match Sleep::concurrently(self.sleep, effect.sleep) {
                 ConcurrentOrder::Equal(sleep) => Inner::Effect(DeferredEffect {
@@ -115,106 +123,20 @@ impl<T: Value> DeferredEffect<T> {
                     Inner::concurrently(Inner::Effect(self.clone()), second)
                 }),
             }),
-            Inner::Value(effect) => Inner::Value(DeferredValue {
-                value: (None, Some(effect.value.clone())),
-                next: Arc::new(move |(_, second_value)| {
-                    let second = (effect.next.clone())(second_value.unwrap());
+            Inner::Bind(effect) => Inner::Bind(DeferredBind {
+                value: effect.value,
+                next: Arc::new(move |second_value| {
+                    let second = (effect.next.clone())(second_value);
                     Inner::concurrently(Inner::Effect(self.clone()), second)
                 }),
             }),
-            Inner::None => Inner::Effect(self).map(|first| (Some(first), None)),
-        }
-    }
-}
-
-impl<T: Value> DeferredValue<T> {
-    pub fn pure(value: T) -> Self {
-        Self {
-            value,
-            next: Arc::new(|_| Inner::None),
-        }
-    }
-
-    pub fn next(self) -> Inner<T> {
-        let Self { value, next } = self;
-        (next)(value)
-    }
-
-    pub fn concurrently<U: Value>(self, y: Inner<U>) -> Inner<(Option<T>, Option<U>)> {
-        match y {
-            Inner::Effect(effect) => Inner::Value(DeferredValue {
-                value: (Some(self.value.clone()), None),
-                next: Arc::new(move |(first_value, _)| {
-                    let first = (self.next.clone())(first_value.unwrap());
-                    Inner::concurrently(first, Inner::Effect(effect.clone()))
+            Inner::Pure(effect) => Inner::Effect(DeferredEffect {
+                sleep: self.sleep,
+                next: Arc::new(move || {
+                    let first = (self.next.clone())();
+                    Inner::concurrently(first, Inner::Pure(effect.clone()))
                 }),
             }),
-            Inner::Io(effect) => Inner::Value(DeferredValue {
-                value: (Some(self.value.clone()), None),
-                next: Arc::new(move |(first_value, _)| {
-                    let first = (self.next.clone())(first_value.unwrap());
-                    Inner::concurrently(first, Inner::Io(effect.clone()))
-                }),
-            }),
-            Inner::Value(effect) => Inner::Value(DeferredValue {
-                value: (Some(self.value.clone()), Some(effect.value.clone())),
-                next: Arc::new(move |(first_value, second_value)| {
-                    let first = (self.next.clone())(first_value.unwrap());
-                    let second = (effect.next.clone())(second_value.unwrap());
-                    Inner::concurrently(first, second)
-                }),
-            }),
-            Inner::None => Inner::Value(self).map(|first| (Some(first), None)),
-        }
-    }
-}
-
-impl<T: Value> DeferredIo<T> {
-    pub fn next(self) -> Inner<T> {
-        let Self { io, next } = self;
-        let value = io();
-        (next)(value)
-    }
-
-    pub fn concurrently<U: Value>(self, y: Inner<U>) -> Inner<(Option<T>, Option<U>)> {
-        match y {
-            Inner::Effect(effect) => Inner::Io(DeferredIo {
-                io: self.io,
-                next: Arc::new(move |io_value| {
-                    let first = (self.next.clone())(io_value);
-                    Inner::concurrently(first, Inner::Effect(effect.clone()))
-                }),
-            }),
-            Inner::Io(effect) => {
-                Inner::Io(DeferredIo {
-                    io: Arc::new(move || {
-                        let first_value = (self.io.clone())();
-                        let second_value = (effect.io.clone())();
-                        Arc::new((first_value, second_value))
-                    }),
-                    next: Arc::new(move |io_arc_pair| {
-                        let io_any_pair: &dyn Any = &*io_arc_pair;
-                        match io_any_pair.downcast_ref::<(Arc<dyn Any + Send + Sync>, Arc<dyn Any + Send + Sync>)>() {
-                        Some((first_io_arc_value, second_io_arc_value)) => {
-                            let first = (self.next.clone())(first_io_arc_value.clone());
-                            let second = (effect.next.clone())(second_io_arc_value.clone());
-                            Inner::concurrently(first, second)
-                        }
-                        None => {
-                            unreachable!();
-                        }
-                    }
-                    }),
-                })
-            }
-            Inner::Value(effect) => Inner::Io(DeferredIo {
-                io: self.io,
-                next: Arc::new(move |io_value| {
-                    let first = (self.next.clone())(io_value);
-                    Inner::concurrently(first, Inner::Value(effect.clone()))
-                }),
-            }),
-            Inner::None => Inner::Io(self).map(|first| (Some(first), None)),
         }
     }
 }
@@ -231,41 +153,177 @@ impl<T: Value> DeferredIo<T> {
                 match io_any_value.downcast_ref::<T>() {
                     Some(io_value) => Inner::pure(io_value.clone()),
                     None => {
-                        unreachable!();
+                        unreachable!("bad dynamic cast of IO effect's return value");
                     }
                 }
             }),
         }
     }
+
+    pub fn next(self) -> Inner<T> {
+        let Self { io, next } = self;
+        let value = io();
+        (next)(value)
+    }
+
+    pub fn concurrently<U: Value>(self, y: Inner<U>) -> Inner<(T, U)> {
+        match y {
+            Inner::Effect(effect) => Inner::Io(DeferredIo {
+                io: self.io,
+                next: Arc::new(move |io_value| {
+                    let first = (self.next.clone())(io_value);
+                    Inner::concurrently(first, Inner::Effect(effect.clone()))
+                }),
+            }),
+            Inner::Io(effect) => Inner::Io(DeferredIo {
+                io: Arc::new(move || {
+                    let first_value = (self.io.clone())();
+                    let second_value = (effect.io.clone())();
+                    Arc::new((first_value, second_value))
+                }),
+                next: Arc::new(move |io_arc_pair| {
+                    let io_any_pair: &dyn Any = &*io_arc_pair;
+                    match io_any_pair
+                        .downcast_ref::<(Arc<dyn DynamicValue>, Arc<dyn DynamicValue>)>()
+                    {
+                        Some((first_io_arc_value, second_io_arc_value)) => {
+                            let first = (self.next.clone())(first_io_arc_value.clone());
+                            let second = (effect.next.clone())(second_io_arc_value.clone());
+                            Inner::concurrently(first, second)
+                        }
+                        None => {
+                            unreachable!(
+                                "bad dynamic cast of concurrent IO effects' return values"
+                            );
+                        }
+                    }
+                }),
+            }),
+            Inner::Bind(effect) => Inner::Io(DeferredIo {
+                io: self.io,
+                next: Arc::new(move |io_value| {
+                    let first = (self.next.clone())(io_value);
+                    Inner::concurrently(first, Inner::Bind(effect.clone()))
+                }),
+            }),
+            Inner::Pure(effect) => Inner::Io(DeferredIo {
+                io: self.io,
+                next: Arc::new(move |io_value| {
+                    let first = (self.next.clone())(io_value);
+                    Inner::concurrently(first, Inner::Pure(effect.clone()))
+                }),
+            }),
+        }
+    }
+}
+
+impl<T: Value> DeferredBind<T> {
+    pub fn next(self) -> Inner<T> {
+        let Self { value, next } = self;
+        (next)(value)
+    }
+
+    pub fn concurrently<U: Value>(self, y: Inner<U>) -> Inner<(T, U)> {
+        match y {
+            Inner::Effect(effect) => Inner::Bind(DeferredBind {
+                value: self.value,
+                next: Arc::new(move |value| {
+                    let first = (self.next.clone())(value);
+                    Inner::concurrently(first, Inner::Effect(effect.clone()))
+                }),
+            }),
+            Inner::Io(effect) => Inner::Io(DeferredIo {
+                io: effect.io,
+                next: Arc::new(move |io_value| {
+                    let second = (effect.next.clone())(io_value);
+                    Inner::concurrently(Inner::Bind(self.clone()), second)
+                }),
+            }),
+            Inner::Bind(effect) => Inner::Bind(DeferredBind {
+                value: Arc::new((self.value, effect.value)),
+                next: Arc::new(move |value_arc_pair| {
+                    let value_arc_pair: &dyn Any = &*value_arc_pair;
+                    match value_arc_pair
+                        .downcast_ref::<(Arc<dyn DynamicValue>, Arc<dyn DynamicValue>)>()
+                    {
+                        Some((first_arc_value, second_arc_value)) => {
+                            let first = (self.next.clone())(first_arc_value.clone());
+                            let second = (effect.next.clone())(second_arc_value.clone());
+                            Inner::concurrently(first, second)
+                        }
+                        None => {
+                            unreachable!("bad dynamic cast of concurrent bind effects' values");
+                        }
+                    }
+                }),
+            }),
+            Inner::Pure(effect) => Inner::Bind(DeferredBind {
+                value: self.value,
+                next: Arc::new(move |value| {
+                    let first = (self.next.clone())(value);
+                    Inner::concurrently(first, Inner::Pure(effect.clone()))
+                }),
+            }),
+        }
+    }
+}
+
+impl<T: Value> Pure<T> {
+    pub fn new(value: T) -> Self {
+        Self { value }
+    }
+
+    pub fn map<U: Value, F: Fn(T) -> U + Value>(self, f: F) -> Pure<U> {
+        Pure {
+            value: f(self.value),
+        }
+    }
+
+    pub fn next(self) -> T {
+        let Self { value } = self;
+        value
+    }
+
+    pub fn concurrently<U: Value>(self, y: Inner<U>) -> Inner<(T, U)> {
+        match y {
+            Inner::Effect(effect) => Inner::Effect(DeferredEffect {
+                sleep: effect.sleep,
+                next: Arc::new(move || {
+                    let second = (effect.next.clone())();
+                    Inner::concurrently(Inner::Pure(self.clone()), second)
+                }),
+            }),
+            Inner::Io(effect) => Inner::Io(DeferredIo {
+                io: effect.io,
+                next: Arc::new(move |io_value| {
+                    let second = (effect.next.clone())(io_value);
+                    Inner::concurrently(Inner::Pure(self.clone()), second)
+                }),
+            }),
+            Inner::Bind(effect) => Inner::Bind(DeferredBind {
+                value: effect.value,
+                next: Arc::new(move |value| {
+                    let second = (effect.next.clone())(value);
+                    Inner::concurrently(Inner::Pure(self.clone()), second)
+                }),
+            }),
+            Inner::Pure(effect) => Inner::Pure(Pure::new((self.value, effect.value))),
+        }
+    }
+}
+
+enum Next<T: Value> {
+    More(Inner<T>),
+    End(T),
 }
 
 impl<T: Value> Inner<T> {
     pub fn pure(value: T) -> Self {
-        Self::Value(DeferredValue::pure(value))
+        Self::Pure(Pure::new(value))
     }
 
     pub fn of_base_io<F: BaseIo<T> + Callback>(io_effect: F) -> Self {
         Self::Io(DeferredIo::of_base_io(io_effect))
-    }
-
-    pub fn union(self, other: Self) -> Self {
-        match self {
-            Self::Effect(effect) => Self::Effect(DeferredEffect {
-                sleep: effect.sleep,
-                next: Arc::new(move || (effect.next.clone())().union(other.clone())),
-            }),
-            Self::Io(effect) => Self::Io(DeferredIo {
-                io: effect.io,
-                next: Arc::new(move |io_value| {
-                    (effect.next.clone())(io_value).union(other.clone())
-                }),
-            }),
-            Self::Value(effect) => Self::Value(DeferredValue {
-                value: effect.value,
-                next: Arc::new(move |value| (effect.next.clone())(value).union(other.clone())),
-            }),
-            Self::None => other,
-        }
     }
 
     pub fn bind<U: Value, F: Fn(T) -> Inner<U> + Value>(self, f: F) -> Inner<U> {
@@ -278,9 +336,22 @@ impl<T: Value> Inner<T> {
                 io: effect.io,
                 next: Arc::new(move |io_value| (effect.next.clone())(io_value).bind(f.clone())),
             }),
-            Self::Value(effect) => ((f.clone())(effect.value.clone()))
-                .union(((effect.next.clone())(effect.value.clone())).bind(f.clone())),
-            Self::None => Inner::None,
+            Self::Bind(effect) => Inner::Bind(DeferredBind {
+                value: effect.value,
+                next: Arc::new(move |value| (effect.next.clone())(value).bind(f.clone())),
+            }),
+            Self::Pure(effect) => Inner::Bind(DeferredBind {
+                value: Arc::new(effect.value),
+                next: Arc::new(move |arc_value| {
+                    let any_value: &dyn Any = &*arc_value;
+                    match any_value.downcast_ref::<T>() {
+                        Some(value) => (f.clone())(value.clone()),
+                        None => {
+                            unreachable!("bad dynamic cast of bind effect's value");
+                        }
+                    }
+                }),
+            }),
         }
     }
 
@@ -294,68 +365,57 @@ impl<T: Value> Inner<T> {
                 io: effect.io,
                 next: Arc::new(move |io_value| (effect.next.clone())(io_value).map(f.clone())),
             }),
-            Self::Value(effect) => Inner::Value(DeferredValue {
-                value: (f.clone())(effect.value.clone()),
-                next: Arc::new(move |_| (effect.next.clone())(effect.value.clone()).map(f.clone())),
+            Self::Bind(effect) => Inner::Bind(DeferredBind {
+                value: effect.value,
+                next: Arc::new(move |value| (effect.next.clone())(value).map(f.clone())),
             }),
-            Self::None => Inner::None,
+            Self::Pure(effect) => Inner::Pure(effect.map(f)),
         }
     }
 
-    pub fn next(self) -> Option<Self> {
+    fn next(self) -> Next<T> {
         match self {
-            Self::Effect(effect) => Some(effect.next()),
-            Self::Io(effect) => Some(effect.next()),
-            Self::Value(effect) => Some(effect.next()),
-            Self::None => None,
+            Self::Effect(effect) => Next::More(effect.next()),
+            Self::Io(effect) => Next::More(effect.next()),
+            Self::Bind(effect) => Next::More(effect.next()),
+            Self::Pure(effect) => Next::End(effect.next()),
         }
     }
 
-    pub fn block(self) -> impl BaseIo<Option<T>> + 'static {
+    pub fn block(self) -> impl BaseIo<T> + 'static {
         move || {
             let mut instance = self.clone();
-            let mut value = match &instance {
-                Self::Effect(_) => None,
-                Self::Io(_) => None,
-                Self::Value(effect) => Some(effect.value.clone()),
-                Self::None => None,
-            };
-            while let Some(next) = instance.clone().next() {
-                value = match &next {
-                    Self::Effect(_) => None,
-                    Self::Io(_) => None,
-                    Self::Value(effect) => Some(effect.value.clone()),
-                    Self::None => None,
-                };
-                instance = next;
+            loop {
+                match instance.clone().next() {
+                    Next::More(more) => instance = more,
+                    Next::End(value) => break value,
+                }
             }
-            value
         }
     }
 
-    pub fn for_m<U: Value, I, F>(collection: I, f: F) -> Self
-    where
-        I: IntoIterator<Item = U>,
-        F: Fn(U) -> Self,
-    {
-        let mut effect = None;
-        for item in collection.into_iter() {
-            let next_effect = f(item);
-            effect = match effect {
-                None => Some(next_effect),
-                Some(effect) => Some(Self::bind(effect, move |_| next_effect.clone())),
-            }
-        }
-        effect.unwrap_or(Self::None)
-    }
-
-    pub fn concurrently<U: Value>(x: Self, y: Inner<U>) -> Inner<(Option<T>, Option<U>)> {
+    pub fn concurrently<U: Value>(x: Self, y: Inner<U>) -> Inner<(T, U)> {
         match x {
             Self::Effect(effect) => effect.concurrently(y),
             Self::Io(effect) => effect.concurrently(y),
-            Self::Value(effect) => effect.concurrently(y),
-            Self::None => y.map(|second| (None, Some(second))),
+            Self::Bind(effect) => effect.concurrently(y),
+            Self::Pure(effect) => effect.concurrently(y),
         }
+    }
+}
+
+impl Inner<()> {
+    pub fn for_m<U: Value, I, F>(collection: I, f: F) -> Self
+    where
+        I: IntoIterator<Item = U>,
+        F: Fn(U) -> Self + Value,
+    {
+        collection
+            .into_iter()
+            .fold(Self::pure(()), move |accumulator, item| {
+                let f = f.clone();
+                Self::bind(accumulator, move |_| (f.clone())(item.clone()))
+            })
     }
 }
 
@@ -394,34 +454,23 @@ impl<T: Value> AsyncIo<T> {
         AsyncIo(self.0.map(f))
     }
 
-    pub fn block(self) -> impl BaseIo<Option<T>> + 'static {
+    pub fn block(self) -> impl BaseIo<T> + 'static {
         self.0.block()
     }
 
-    pub fn for_m<U: Value, I, F>(collection: I, f: F) -> Self
-    where
-        I: IntoIterator<Item = U>,
-        F: Fn(U) -> Self,
-    {
-        Self(Inner::for_m(collection, move |value| f(value).0))
-    }
-
-    pub fn concurrently<U: Value>(x: Self, y: AsyncIo<U>) -> AsyncIo<(Option<T>, Option<U>)> {
+    pub fn concurrently<U: Value>(x: Self, y: AsyncIo<U>) -> AsyncIo<(T, U)> {
         AsyncIo(Inner::concurrently(x.0, y.0))
     }
 
-    pub fn concurrently_all<I: IntoIterator<Item = Self>>(
-        collection: I,
-    ) -> AsyncIo<Vec<Option<T>>> {
-        let mut action: AsyncIo<Vec<Option<T>>> = AsyncIo::pure(Vec::new());
-        for item in collection {
-            action = AsyncIo::concurrently(action, item).map(|(v_option, value)| {
-                let mut v = v_option.unwrap_or_default();
-                v.push(value);
-                v
-            });
-        }
-        action
+    pub fn concurrently_all<I: IntoIterator<Item = Self>>(collection: I) -> AsyncIo<Vec<T>> {
+        collection
+            .into_iter()
+            .fold(AsyncIo::pure(Vec::new()), |accumulator, item| {
+                AsyncIo::concurrently(accumulator, item).map(|(mut v, value)| {
+                    v.push(value);
+                    v
+                })
+            })
     }
 }
 
@@ -432,6 +481,14 @@ impl From<Sleep> for AsyncIo<()> {
 }
 
 impl AsyncIo<()> {
+    pub fn for_m<U: Value, I, F>(collection: I, f: F) -> Self
+    where
+        I: IntoIterator<Item = U>,
+        F: Fn(U) -> Self + Value,
+    {
+        Self(Inner::for_m(collection, move |value| f(value).0))
+    }
+
     pub fn sleep(sleep_duration: Duration) -> Self {
         Sleep::new(sleep_duration).into()
     }

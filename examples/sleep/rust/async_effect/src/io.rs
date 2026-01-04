@@ -36,6 +36,11 @@ where
     }
 }
 
+/// Evaluate an IO effect
+///
+/// Evaluation should only be done at the outermost level of a program, which is
+/// why this function is only implemented for effects that evaluate to process
+/// exit codes.
 pub fn run<F: BaseIo<ExitCode>>(io_effect: F) -> ExitCode {
     io_effect()
 }
