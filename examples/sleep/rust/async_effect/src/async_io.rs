@@ -442,3 +442,17 @@ impl AsyncIo<()> {
         Sleep::from_seconds(sleep_duration_seconds).into()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn enforce_trait_bounds<T: AsyncIoValue>(value: T) -> T {
+        value
+    }
+
+    #[test]
+    fn async_io_implements_desired_traits() {
+        enforce_trait_bounds(AsyncIo::pure(Vec::<usize>::new()));
+    }
+}
