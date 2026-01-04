@@ -32,7 +32,7 @@ fn main() -> impl Termination {
             block_and_print(all_action)
         });
 
-        io::bind(io_effect, |_| io::pure_copy(ExitCode::SUCCESS))
+        io::bind(io_effect, |_| io::pure(ExitCode::SUCCESS))
     });
     io::run(io_effect)
 }

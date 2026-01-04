@@ -13,22 +13,42 @@ pub trait AsyncIoValue: 'static + Clone + Send + Sync {}
 
 impl<T: 'static + Clone + Send + Sync> AsyncIoValue for T {}
 
+pub trait Callback: 'static + Send + Sync {}
+
+impl<F: 'static + Send + Sync> Callback for F {}
+
+trait EffectCallback<T: AsyncIoValue>: Fn() -> AsyncIoInner<T> + Callback {}
+
+impl<T: AsyncIoValue, F: Fn() -> AsyncIoInner<T> + Callback> EffectCallback<T> for F {}
+
+trait ValueCallback<T: AsyncIoValue>: Fn(T) -> AsyncIoInner<T> + Callback {}
+
+impl<T: AsyncIoValue, F: Fn(T) -> AsyncIoInner<T> + Callback> ValueCallback<T> for F {}
+
+trait IoAction: BaseIo<Arc<dyn Any + Send + Sync>> + Callback {}
+
+impl<F: BaseIo<Arc<dyn Any + Send + Sync>> + Callback> IoAction for F {}
+
+trait IoCallback<T: AsyncIoValue>: Fn(Arc<dyn Any>) -> AsyncIoInner<T> + Callback {}
+
+impl<T: AsyncIoValue, F: Fn(Arc<dyn Any>) -> AsyncIoInner<T> + Callback> IoCallback<T> for F {}
+
 #[derive(Clone)]
 struct DeferredEffect<T: AsyncIoValue> {
     sleep: Sleep,
-    next: Arc<dyn Fn() -> AsyncIoInner<T> + 'static + Send + Sync>,
+    next: Arc<dyn EffectCallback<T>>,
 }
 
 #[derive(Clone)]
 struct DeferredValue<T: AsyncIoValue> {
     value: T,
-    next: Arc<dyn Fn(T) -> AsyncIoInner<T> + 'static + Send + Sync>,
+    next: Arc<dyn ValueCallback<T>>,
 }
 
 #[derive(Clone)]
 struct DeferredIo<T: AsyncIoValue> {
-    io: Arc<dyn BaseIo<Arc<dyn Any + Send + Sync>> + 'static + Send + Sync>,
-    next: Arc<dyn Fn(Arc<dyn Any>) -> AsyncIoInner<T> + 'static + Send + Sync>,
+    io: Arc<dyn IoAction>,
+    next: Arc<dyn IoCallback<T>>,
 }
 
 #[derive(Clone)]
@@ -209,7 +229,7 @@ impl<T: AsyncIoValue> DeferredIo<T> {
 }
 
 impl<T: AsyncIoValue> DeferredIo<T> {
-    pub fn of_base_io<F: BaseIo<T> + 'static + Send + Sync>(io_effect: F) -> Self {
+    pub fn of_base_io<F: BaseIo<T> + Callback>(io_effect: F) -> Self {
         Self {
             io: Arc::new(move || {
                 let value = io_effect();
@@ -233,7 +253,7 @@ impl<T: AsyncIoValue> AsyncIoInner<T> {
         Self::Value(DeferredValue::pure(value))
     }
 
-    pub fn of_base_io<F: BaseIo<T> + 'static + Send + Sync>(io_effect: F) -> Self {
+    pub fn of_base_io<F: BaseIo<T> + Callback>(io_effect: F) -> Self {
         Self::Io(DeferredIo::of_base_io(io_effect))
     }
 
@@ -377,7 +397,7 @@ impl<T: AsyncIoValue> AsyncIo<T> {
         Self(AsyncIoInner::pure(value))
     }
 
-    pub fn of_base_io<F: BaseIo<T> + 'static + Send + Sync>(io_effect: F) -> Self {
+    pub fn of_base_io<F: BaseIo<T> + Callback>(io_effect: F) -> Self {
         Self(AsyncIoInner::of_base_io(io_effect))
     }
 

@@ -22,16 +22,8 @@ pub fn monotonic_now() -> impl 'static + BaseIo<Instant> {
     || Instant::now()
 }
 
-pub fn pure_clone<T: Clone>(value: T) -> impl BaseIo<T> {
+pub fn pure<T: Clone>(value: T) -> impl BaseIo<T> {
     move || value.clone()
-}
-
-pub fn pure_copy<T: Copy>(value: T) -> impl BaseIo<T> {
-    move || value
-}
-
-pub fn pure_ref<T>(value: &T) -> impl BaseIo<&T> {
-    move || value
 }
 
 pub fn bind<T, U, F: BaseIo<T>, G, H: BaseIo<U>>(io_effect: F, g: G) -> impl BaseIo<U>

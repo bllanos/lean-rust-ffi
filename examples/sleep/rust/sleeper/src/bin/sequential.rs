@@ -17,7 +17,7 @@ fn main() -> impl Termination {
         });
         let action = ascending_action.bind(move |_| descending_action.clone());
         let io_effect = block_and_print(action);
-        io::bind(io_effect, |_| io::pure_copy(ExitCode::SUCCESS))
+        io::bind(io_effect, |_| io::pure(ExitCode::SUCCESS))
     });
     io::run(io_effect)
 }
