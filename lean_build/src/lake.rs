@@ -152,8 +152,15 @@ fn run_lake_command_and_retrieve_stdout<'a, P: AsRef<OsStr>>(
 }
 
 #[derive(thiserror::Error, Debug)]
+#[error("library path {0} does not contain a filename")]
+pub struct LibraryPathMissingFilenameError(PathBuf);
+
+#[derive(thiserror::Error, Debug)]
 #[error("invalid Lake query output")]
-pub struct InvalidLakeQueryOutputError(#[from] NotUnicodeBytes);
+pub enum InvalidLakeQueryOutputError {
+    NotUnicode(#[from] NotUnicodeBytes),
+    LibraryPathMissingFilename(#[from] LibraryPathMissingFilenameError),
+}
 
 /// Assumes there is only a single target path
 fn get_lake_target_path_from_lake_query_output(
@@ -210,9 +217,15 @@ pub fn build_and_link_static_lean_library<
     if let Some(library_directory) = library_path.parent() {
         println!("cargo::rustc-link-search={}", library_directory.display());
     }
+    let library_filename =
+        library_path
+            .file_name()
+            .ok_or_else(|| -> InvalidLakeQueryOutputError {
+                LibraryPathMissingFilenameError(library_path.clone()).into()
+            })?;
     println!(
-        "cargo::rustc-link-lib=static={}",
-        lake_library_description.target_name
+        "cargo::rustc-link-lib=static:+verbatim={}",
+        library_filename.display()
     );
 
     rerun_build_if_lake_package_changes(lake_library_description);

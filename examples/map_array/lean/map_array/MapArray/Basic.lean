@@ -1,6 +1,8 @@
+module
+
 namespace MapArray
 
-structure MapOptions where
+public structure MapOptions where
   addend : Int32
   multiplicand : Int32
 deriving Repr
@@ -17,7 +19,7 @@ def mkMapOptions : (addend : Int32) → (multiplicand : Int32) → MapOptions :=
 def mapOptionsToString : MapOptions → String := ToString.toString
 
 @[export my_map]
-def map (options : MapOptions) (arr : Array UInt8) : Array Int32 :=
+public def map (options : MapOptions) (arr : Array UInt8) : Array Int32 :=
   arr.map (fun x => (x.toInt8.toInt32 + options.addend) * options.multiplicand)
 
 end MapArray

@@ -49,17 +49,6 @@ fn parse_lean_module_name_from_rust_module_initializer_type_name(
         .map_err(|error| syn::Error::new(name.span(), error))
 }
 
-pub fn parse_lean_module_initialization_function_from_rust_module_initializer_type_name(
-    name: &Ident,
-) -> syn::Result<Ident> {
-    let module_name = parse_lean_module_name_from_rust_module_initializer_type_name(name)?;
-    Ok(format_ident!(
-        "initialize_{}",
-        module_name,
-        span = name.span()
-    ))
-}
-
 pub fn parse_lean_module_trait_from_rust_module_initializer_type_name(
     name: &Ident,
 ) -> syn::Result<Ident> {

@@ -34,7 +34,7 @@ $(OUT_DIR)/main: main.c lake | $(OUT_DIR)
 # (Reference: <https://stackoverflow.com/questions/5604061/making-gcc-prefer-static-libs-to-shared-objects-when-linking>)
 #
 	cc -o $@ $< -I $(LEAN_SYSROOT)/include \
-		$(MAP_ARRAY_DIR)/.lake/build/lib/libMapArray.a \
+		$(MAP_ARRAY_DIR)/.lake/build/lib/libmap_x2darray_MapArray.a \
 		$(LEAN_LIBDIR)/libInit.a \
 		$(LEAN_LIBDIR)/libleanrt.a \
 		$(SYSROOT_LIBDIR)/libuv.a \

@@ -29,8 +29,8 @@ This repository contains Rust [crates](https://doc.rust-lang.org/book/ch07-01-pa
    This project does not have a well-known set of compatible Rust versions. At the time of writing, the Rust version used was:
 
    ```text
-   cargo 1.90.0 (840b83a10 2025-07-30)
-   rustc and rust-std 1.90.0 (1159e78c4 2025-09-14)
+   cargo 1.93.0 (083ac5135 2025-12-15)
+   rustc and rust-std 1.93.0 (254b59607 2026-01-19)
    ```
 
 2. Install Lean: <https://lean-lang.org/install/manual/>
@@ -40,8 +40,8 @@ This repository contains Rust [crates](https://doc.rust-lang.org/book/ch07-01-pa
    This project does not have a well-known set of compatible Lean versions. At the time of writing, the Lean version used was:
 
    ```text
-   leanprover/lean4:v4.26.0
-   Lean (version 4.26.0, x86_64-unknown-linux-gnu, commit d8204c9fd894f91bbb2cdfec5912ec8196fd8562, Release)
+   leanprover/lean4:v4.27.0
+   Lean (version 4.27.0, x86_64-unknown-linux-gnu, commit db93fe1608548721853390a10cd40580fe7d22ae, Release)
    ```
 
 3. Install system dependencies of `bindgen`: <https://rust-lang.github.io/rust-bindgen/requirements.html>
@@ -113,7 +113,7 @@ lake --dir=../lean/map_array build @/MapArray:static
 Build completed successfully (6 jobs).
 mkdir -p out
 cc -o out/main main.c -I $HOME/.elan/toolchains/leanprover--lean4---$VERSION/include \
-   ../lean/map_array/.lake/build/lib/libMapArray.a \
+   ../lean/map_array/.lake/build/lib/libmap_x2darray_MapArray.a \
    $HOME/.elan/toolchains/leanprover--lean4---$VERSION/lib/lean/libInit.a \
    $HOME/.elan/toolchains/leanprover--lean4---$VERSION/lib/lean/libleanrt.a \
    $HOME/.elan/toolchains/leanprover--lean4---$VERSION/lib/libuv.a \

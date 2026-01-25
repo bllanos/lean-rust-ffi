@@ -1,3 +1,5 @@
+module
+
 import Std.Internal.Async
 import Std.Internal.Async.Timer
 import Std.Time
@@ -14,14 +16,14 @@ def formatElapsedTime (startTimeMilliseconds: Nat) (endTimeMilliseconds: Nat) :
   let elapsedTimeRemainder := elapsedTime - elapsedTimeSeconds
   (elapsedTimeSeconds, elapsedTimeRemainder)
 
-def sleepAndPrint (sleepDurationSeconds : Nat) : Async Unit := do
+public def sleepAndPrint (sleepDurationSeconds : Nat) : Async Unit := do
   let startTime ← IO.monoMsNow
   sleep (Millisecond.Offset.ofSeconds (Second.Offset.ofNat sleepDurationSeconds))
   let endTime ← IO.monoMsNow
   let (elapsedTimeSeconds, elapsedTimeRemainder) := formatElapsedTime startTime endTime
   IO.println s!"Called sleep for {sleepDurationSeconds} seconds (actual sleep duration {elapsedTimeSeconds} seconds {elapsedTimeRemainder} milliseconds)"
 
-def blockAndPrint (action: Async Unit) : IO Unit := do
+public def blockAndPrint (action: Async Unit) : IO Unit := do
   let startTime ← IO.monoMsNow
   Async.block action
   let endTime ← IO.monoMsNow

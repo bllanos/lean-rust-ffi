@@ -11,7 +11,7 @@ use lean_sys::{
 };
 use map_array_sys::{
     MapArray::Basic_c::{map_options_to_string, mk_map_options, my_map},
-    MapArray_c::initialize_MapArray,
+    MapArray_c::initialize_map_x2darray_MapArray,
 };
 
 #[global_allocator]
@@ -51,7 +51,7 @@ fn map_array_custom_allocator() -> anyhow::Result<()> {
     let builtin: u8 = 1;
 
     unsafe {
-        res = initialize_MapArray(builtin);
+        res = initialize_map_x2darray_MapArray(builtin);
         if lean_io_result_is_ok(res) {
             lean_dec(res);
         } else {
