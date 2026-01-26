@@ -5,6 +5,8 @@ members = [
   "examples/map_array/rust/map_array_bin",
   "examples/map_array/rust/map_array_sys",
   "examples/sleep/rust/async_effect",
+  "examples/sleep/rust/async_effect_ffi",
+  "examples/sleep/rust/async_effect_ffi_static",
   "examples/sleep/rust/sleeper",
   "lean",
   "lean/lean_derive",
@@ -21,6 +23,7 @@ edition = "2024"
 [workspace.dependencies]
 anyhow = "1.0.100"
 async-effect = { path = "examples/sleep/rust/async_effect" }
+async-effect-ffi = { path = "examples/sleep/rust/async_effect_ffi" }
 bindgen = "0.71.1"
 cc = "1.2.26"
 dirs = "6.0.0"

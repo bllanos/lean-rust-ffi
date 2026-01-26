@@ -382,16 +382,17 @@ impl<T: Value> Inner<T> {
         }
     }
 
-    pub fn block(self) -> impl BaseIo<T> + 'static {
-        move || {
-            let mut instance = self.clone();
-            loop {
-                match instance.clone().next() {
-                    Next::More(more) => instance = more,
-                    Next::End(value) => break value,
-                }
+    pub fn block_immediate(mut self) -> T {
+        loop {
+            match self.clone().next() {
+                Next::More(more) => self = more,
+                Next::End(value) => break value,
             }
         }
+    }
+
+    pub fn block(self) -> impl BaseIo<T> + 'static {
+        move || self.clone().block_immediate()
     }
 
     pub fn concurrently<U: Value>(x: Self, y: Inner<U>) -> Inner<(T, U)> {
@@ -452,6 +453,10 @@ impl<T: Value> AsyncIo<T> {
 
     pub fn map<U: Value, F: Fn(T) -> U + Value>(self, f: F) -> AsyncIo<U> {
         AsyncIo(self.0.map(f))
+    }
+
+    pub fn block_immediate(self) -> T {
+        self.0.block_immediate()
     }
 
     pub fn block(self) -> impl BaseIo<T> + 'static {

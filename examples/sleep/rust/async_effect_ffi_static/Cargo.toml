@@ -1,0 +1,14 @@
+[package]
+name = "async-effect-ffi-static"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-effect-ffi = { workspace = true }
+
+[lib]
+# Caution: Applications linking static libraries may need to strip unwanted code
+# and symbols before linking them. See
+# <https://doc.rust-lang.org/stable/reference/linkage.html>
+# TODO: Use dynamic linking instead
+crate-type = ["staticlib"]

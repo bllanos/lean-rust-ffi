@@ -1,0 +1,8 @@
+[package]
+name = "async-effect-ffi"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-effect = { workspace = true }
+lean-sys = { workspace = true }

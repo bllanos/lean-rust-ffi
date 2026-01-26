@@ -12,14 +12,20 @@ pub trait BaseIo<T>: Fn() -> T {}
 
 impl<T, F: Fn() -> T> BaseIo<T> for F {}
 
-pub fn println<T: AsRef<str>>(s: T) -> impl BaseIo<()> {
-    move || {
-        println!("{}", s.as_ref());
-    }
+pub fn println_immediate<T: AsRef<str>>(s: T) {
+    println!("{}", s.as_ref());
+}
+
+pub fn println<T: Clone + AsRef<str>>(s: T) -> impl BaseIo<()> {
+    move || println_immediate(s.clone())
+}
+
+pub fn monotonic_now_immediate() -> Instant {
+    Instant::now()
 }
 
 pub fn monotonic_now() -> impl 'static + BaseIo<Instant> {
-    || Instant::now()
+    || monotonic_now_immediate()
 }
 
 pub fn pure<T: Clone>(value: T) -> impl BaseIo<T> {

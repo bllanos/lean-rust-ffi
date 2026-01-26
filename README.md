@@ -100,7 +100,7 @@ cd examples/map_array/c
 ```
 
 > [!NOTE]
-> The scripts used to build and run the program were developed on Linux. The scripts may not work in other environments. In contrast, there are no shell scripts for running the Lean and Rust sample programs. It should be possible to run these sample programs in all environments that Lean and Rust support.
+> The scripts used to build and run the program were developed on Linux. The scripts may not work in other environments. In contrast, there are no shell scripts for running the Lean and Rust sample programs. It may be possible to run these sample programs in other environments that Lean and Rust support.
 
 The script output should look similar to the following:
 
@@ -258,6 +258,8 @@ The [`lean_build/src/elan_fork/`](lean_build/src/elan_fork) directory contains c
 6. [The bindgen User Guide](https://rust-lang.github.io/rust-bindgen/)
 
 7. [The Rustnomicon](https://doc.rust-lang.org/nomicon/index.html), in particular the [chapter on FFI](https://doc.rust-lang.org/nomicon/ffi.html)
+
+8. [Leo3: Rust Bindings for Lean4](https://github.com/AndPuQing/leo3)
 
 ## Contact
 
