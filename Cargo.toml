@@ -6,7 +6,6 @@ members = [
   "examples/map_array/rust/map_array_sys",
   "examples/sleep/rust/async_effect",
   "examples/sleep/rust/async_effect_ffi",
-  "examples/sleep/rust/async_effect_ffi_static",
   "examples/sleep/rust/sleeper",
   "lean",
   "lean/lean_derive",
