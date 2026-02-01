@@ -1,6 +1,6 @@
 import Sleeper
 
-open Sleeper (blockAndPrint formatElapsedTime sleepAndPrint)
+open Sleeper (blockAndPrint sleepAndPrint)
 
 def maximumSleepTimeSeconds : Nat := 6
 

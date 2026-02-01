@@ -1,6 +1,6 @@
 module
 
-import Std.Internal.Async
+public import Std.Internal.Async
 import Std.Internal.Async.Timer
 import Std.Time
 

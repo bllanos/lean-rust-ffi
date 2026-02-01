@@ -1,7 +1,7 @@
 name = "map-array-bin"
 versionTags = []
 defaultTargets = ["main"]
-licenseFiles = ["../../LICENSE-APACHE", "../../LICENSE-MIT"]
+licenseFiles = ["../../../../LICENSE-APACHE", "../../../../LICENSE-MIT"]
 
 [[lean_exe]]
 name = "main"

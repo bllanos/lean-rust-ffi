@@ -1,5 +1,6 @@
 name = "pure_lean"
 version = "0.1.0"
+licenseFiles = ["../../../../LICENSE-APACHE", "../../../../LICENSE-MIT"]
 
 [[lean_lib]]
 name = "Sleeper"

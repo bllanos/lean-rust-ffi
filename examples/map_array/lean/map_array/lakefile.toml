@@ -1,7 +1,7 @@
 name = "map-array"
 versionTags = []
 defaultTargets = ["MapArray"]
-licenseFiles = ["../../LICENSE-APACHE", "../../LICENSE-MIT"]
+licenseFiles = ["../../../../LICENSE-APACHE", "../../../../LICENSE-MIT"]
 
 [[lean_lib]]
 name = "MapArray"

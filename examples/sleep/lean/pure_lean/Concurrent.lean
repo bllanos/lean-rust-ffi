@@ -4,7 +4,7 @@ import Sleeper
 
 open Std.Internal.IO.Async (Async)
 
-open Sleeper (blockAndPrint formatElapsedTime sleepAndPrint)
+open Sleeper (blockAndPrint sleepAndPrint)
 
 def maximumSleepTimeSeconds : Nat := 6
 
