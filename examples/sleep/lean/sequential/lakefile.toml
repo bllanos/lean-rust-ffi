@@ -1,0 +1,13 @@
+name = "sequential"
+version = "0.1.0"
+licenseFiles = ["../../../../LICENSE-APACHE", "../../../../LICENSE-MIT"]
+
+[[lean_lib]]
+name = "Sequential"
+buildType = "release"
+defaultFacets = ["static"]
+
+# TODO only Sleeper should directly depend on this package. Depend on Sleeper here instead.
+[[require]]
+name = "async-effect"
+path = "../async_effect"

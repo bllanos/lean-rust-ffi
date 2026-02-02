@@ -1,0 +1,12 @@
+name = "sleeper"
+version = "0.1.0"
+licenseFiles = ["../../../../LICENSE-APACHE", "../../../../LICENSE-MIT"]
+
+[[lean_lib]]
+name = "Sleeper"
+buildType = "release"
+defaultFacets = ["static"]
+
+[[require]]
+name = "async-effect"
+path = "../async_effect"

@@ -6,7 +6,12 @@ members = [
   "examples/map_array/rust/map_array_sys",
   "examples/sleep/rust/async_effect",
   "examples/sleep/rust/async_effect_ffi",
+  "examples/sleep/rust/async_effect_sys",
+  "examples/sleep/rust/concurrent_sys",
+  "examples/sleep/rust/pure_rust",
+  "examples/sleep/rust/sequential_sys",
   "examples/sleep/rust/sleeper",
+  "examples/sleep/rust/sleeper_sys",
   "lean",
   "lean/lean_derive",
   "lean/lean_macro",
@@ -23,8 +28,10 @@ edition = "2024"
 anyhow = "1.0.100"
 async-effect = { path = "examples/sleep/rust/async_effect" }
 async-effect-ffi = { path = "examples/sleep/rust/async_effect_ffi" }
+async-effect-sys = { path = "examples/sleep/rust/async_effect_sys" }
 bindgen = "0.71.1"
 cc = "1.2.26"
+concurrent-sys = { path = "examples/sleep/rust/concurrent_sys" }
 dirs = "6.0.0"
 itertools = "0.14.0"
 lean = { path = "lean" }
@@ -39,7 +46,9 @@ proc-macro2 = "1.0.101"
 quote = "1.0.41"
 regex = "1.11.1"
 semver = "1.0.26"
+sequential-sys = { path = "examples/sleep/rust/sequential_sys" }
 sleeper = { path = "examples/sleep/rust/sleeper" }
+sleeper-sys = { path = "examples/sleep/rust/sleeper_sys" }
 syn = { version = "2.0.106", default-features = false }
 thiserror = "2.0.12"
 toml = "0.9.5"

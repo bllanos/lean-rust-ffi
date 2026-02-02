@@ -1,7 +1,14 @@
 [package]
-name = "sleeper"
+name = "sleeper-lean"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
-async-effect = { workspace = true }
+anyhow = { workspace = true }
+# TODO replace async-effect* dependencies with dependencies on sleeper-sys
+async-effect-ffi = { workspace = true }
+async-effect-sys = { workspace = true }
+concurrent-sys = { workspace = true }
+lean = { workspace = true }
+lean-sys = { workspace = true }
+sequential-sys = { workspace = true }

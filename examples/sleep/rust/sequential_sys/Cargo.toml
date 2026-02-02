@@ -1,0 +1,12 @@
+[package]
+name = "sequential-sys"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+lean-sys = { workspace = true }
+
+[build-dependencies]
+anyhow = { workspace = true }
+lean-build = { workspace = true }
+thiserror = { workspace = true }

@@ -1,0 +1,9 @@
+name = "async-effect"
+versionTags = []
+defaultTargets = ["AsyncEffect"]
+licenseFiles = ["../../../../LICENSE-APACHE", "../../../../LICENSE-MIT"]
+
+[[lean_lib]]
+name = "AsyncEffect"
+buildType = "release"
+defaultFacets = ["static"]

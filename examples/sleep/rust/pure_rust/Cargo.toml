@@ -1,0 +1,7 @@
+[package]
+name = "sleeper-pure-rust"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-effect = { workspace = true }
