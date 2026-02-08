@@ -8,8 +8,7 @@ lean-sys = { workspace = true }
 
 [build-dependencies]
 anyhow = { workspace = true }
-lean-build = { workspace = true }
-thiserror = { workspace = true }
+examples-build-infrastructure = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }

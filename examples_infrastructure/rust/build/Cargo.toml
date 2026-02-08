@@ -1,0 +1,8 @@
+[package]
+name = "examples-build-infrastructure"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+lean-build = { workspace = true }
+thiserror = { workspace = true }

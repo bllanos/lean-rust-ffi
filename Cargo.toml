@@ -12,6 +12,7 @@ members = [
   "examples/sleep/rust/sequential_sys",
   "examples/sleep/rust/sleeper",
   "examples/sleep/rust/sleeper_sys",
+  "examples_infrastructure/rust/build",
   "lean",
   "lean/lean_derive",
   "lean/lean_macro",
@@ -33,6 +34,7 @@ bindgen = "0.71.1"
 cc = "1.2.26"
 concurrent-sys = { path = "examples/sleep/rust/concurrent_sys" }
 dirs = "6.0.0"
+examples-build-infrastructure = { path = "examples_infrastructure/rust/build" }
 itertools = "0.14.0"
 lean = { path = "lean" }
 lean-build = { path = "lean_build" }
