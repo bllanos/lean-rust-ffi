@@ -2,6 +2,8 @@
 name = "lean-sys"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+
 # It is not possible to specify that a crate links to multiple system libraries.
 # See https://github.com/rust-lang/cargo/issues/4533
 #
