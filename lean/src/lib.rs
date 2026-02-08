@@ -26,8 +26,8 @@ pub use error::{LeanError, LeanInitializationError, LeanIoError};
 pub use module::NoModules;
 pub use result::{LeanIoResult, run_lean_io_unit};
 pub use runtime::{
-    ArgcError, LeanPackage, LeanPackageComponents, Minimal, MinimalComponents, RuntimeImpl,
-    RuntimeInitializationError, ThreadRuntimeImpl, run_in_lean_runtime,
+    LeanPackage, LeanPackageComponents, Minimal, MinimalComponents, RuntimeImpl,
+    RuntimeInitializationError, ThreadRuntimeImpl, args, run_in_lean_runtime,
     run_in_lean_runtime_unchecked, run_in_lean_runtime_with_default_error_handler,
     run_in_lean_sync_runtime, run_in_lean_sync_runtime_unchecked,
     run_in_lean_sync_runtime_with_default_error_handler,

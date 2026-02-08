@@ -10,8 +10,8 @@ mod runtime_impl;
 mod thread_runtime_impl;
 
 pub use components::{
-    ArgcError, LeanPackage, LeanPackageComponents, Minimal, MinimalComponents,
-    RuntimeInitializationError,
+    LeanPackage, LeanPackageComponents, Minimal, MinimalComponents, RuntimeInitializationError,
+    args,
 };
 pub use runtime_impl::RuntimeImpl;
 pub use thread_runtime_impl::ThreadRuntimeImpl;

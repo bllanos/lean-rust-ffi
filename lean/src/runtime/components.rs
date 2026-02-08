@@ -7,9 +7,9 @@ use lean_sys::{
 
 use crate::{RuntimeComponents, SyncRuntimeComponents};
 
-mod args;
+pub mod args;
 
-pub use args::ArgcError;
+use args::ArgcError;
 
 #[derive(thiserror::Error, Debug, PartialEq, Eq)]
 pub enum RuntimeInitializationError {
