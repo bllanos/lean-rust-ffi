@@ -37,10 +37,8 @@ fn main() -> anyhow::Result<()> {
 
     // Program logic
     // -------------
-    let result;
-    unsafe {
-        result = run_lean_io_unit(|| concurrent_main()).context("Lean main function failed");
-    }
+    let result =
+        unsafe { run_lean_io_unit(|| concurrent_main()).context("Lean main function failed") };
 
     // Lean cleanup
     // --------------------
