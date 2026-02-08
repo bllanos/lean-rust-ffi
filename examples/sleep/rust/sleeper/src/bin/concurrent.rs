@@ -1,16 +1,17 @@
 use std::env;
 use std::ffi::{c_char, c_int};
 
+use anyhow::Context;
+
 // Force linking of this crate even though there is no direct reference to it
 // from Rust code
 extern crate sleeper_lean;
 
 use concurrent_sys::Concurrent_c::{concurrent_main, initialize_concurrent_Concurrent};
-use lean::MimallocAllocator;
+use lean::{MimallocAllocator, run_lean_io_unit};
 use lean_sys::{
-    lean_dec, lean_finalize_task_manager, lean_init_task_manager, lean_initialize_runtime_module,
-    lean_io_mark_end_initialization, lean_io_result_is_ok, lean_io_result_show_error, lean_object,
-    lean_setup_args,
+    lean_finalize_task_manager, lean_init_task_manager, lean_initialize_runtime_module,
+    lean_io_mark_end_initialization, lean_setup_args,
 };
 
 #[global_allocator]
@@ -40,36 +41,22 @@ fn main() -> anyhow::Result<()> {
 
     // Lean module initialization
     // --------------------------
-    let res: *mut lean_object;
     // Use same default as for Lean executables
     // See https://github.com/leanprover/lean4/blob/master/doc/dev/ffi.md#initialization
     let builtin: u8 = 1;
 
     unsafe {
-        res = initialize_concurrent_Concurrent(builtin);
-        if lean_io_result_is_ok(res) {
-            lean_dec(res);
-        } else {
-            lean_io_result_show_error(res);
-            lean_dec(res);
-            // do not access Lean declarations if initialization failed
-            anyhow::bail!("Lean module initialization failed");
-        }
+        run_lean_io_unit(|| initialize_concurrent_Concurrent(builtin))
+            .context("Lean module initialization failed")?;
         lean_io_mark_end_initialization();
         lean_init_task_manager();
     }
 
     // Program logic
     // -------------
+    let result;
     unsafe {
-        let res = concurrent_main();
-        if lean_io_result_is_ok(res) {
-            lean_dec(res);
-        } else {
-            lean_io_result_show_error(res);
-            lean_dec(res);
-            anyhow::bail!("Lean main function failed");
-        }
+        result = run_lean_io_unit(|| concurrent_main()).context("Lean main function failed");
     }
 
     // Lean cleanup
@@ -78,5 +65,5 @@ fn main() -> anyhow::Result<()> {
         lean_finalize_task_manager();
     }
 
-    Ok(())
+    result
 }
