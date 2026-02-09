@@ -13,7 +13,7 @@ enum OneModuleInitializer {}
 unsafe impl lean::Modules for OneModuleInitializer {
     unsafe fn initialize_modules(_builtin: u8) -> lean_sys::lean_obj_res {
         GLOBAL_INITIALIZATION_STATE.fetch_add(1, Ordering::Relaxed);
-        unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
+        lean::make_lean_io_result_ok_unit()
     }
 }
 
@@ -23,7 +23,7 @@ enum TwoModuleInitializer {}
 unsafe impl lean::Modules for TwoModuleInitializer {
     unsafe fn initialize_modules(_builtin: u8) -> lean_sys::lean_obj_res {
         GLOBAL_INITIALIZATION_STATE.fetch_add(2, Ordering::Relaxed);
-        unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
+        lean::make_lean_io_result_ok_unit()
     }
 }
 
@@ -35,15 +35,12 @@ combine_lean_module_initializers! {
 }
 
 fn assert_initializes_both_modules<T: OneModule + TwoModule>() {
-    let res: *mut lean_sys::lean_object;
     // Use same default as for Lean executables
     // See <https://github.com/leanprover/lean4/blob/master/doc/dev/ffi.md#initialization>
     let builtin: u8 = 1;
 
     unsafe {
-        res = T::initialize_modules(builtin);
-        assert!(lean_sys::lean_io_result_is_ok(res));
-        lean_sys::lean_dec(res);
+        lean::run_lean_io_unit(|| T::initialize_modules(builtin)).unwrap();
     }
 }
 

@@ -26,6 +26,7 @@ name = "async-effect-ffi"
 version = "0.1.0"
 dependencies = [
  "async-effect",
+ "lean",
  "lean-sys",
 ]
 

@@ -1,4 +1,10 @@
-use lean_sys::{lean_dec, lean_io_result_is_ok, lean_obj_res};
+use std::ffi::CString;
+use std::str::FromStr;
+
+use lean_sys::{
+    lean_box, lean_dec, lean_io_result_is_ok, lean_io_result_mk_error, lean_io_result_mk_ok,
+    lean_mk_io_user_error, lean_mk_string, lean_obj_res,
+};
 
 use crate::LeanIoError;
 
@@ -19,4 +25,24 @@ pub unsafe fn run_lean_io_unit<F: FnOnce() -> lean_obj_res>(io_unit: F) -> LeanI
     };
     unsafe { lean_dec(lean_result) };
     result
+}
+
+pub fn make_lean_io_result_ok_unit() -> lean_obj_res {
+    unsafe { lean_io_result_mk_ok(lean_box(0)) }
+}
+
+/// Create a Lean IO result object from a string
+///
+/// # Panics
+///
+/// Panics if the error is not convertible to [`CString`].
+pub fn make_lean_io_result_error(error: &str) -> lean_obj_res {
+    let cstring = CString::from_str(error).unwrap();
+    let cstring_ptr = cstring.as_ptr();
+
+    unsafe {
+        let lean_string = lean_mk_string(cstring_ptr);
+        let lean_io_error = lean_mk_io_user_error(lean_string);
+        lean_io_result_mk_error(lean_io_error)
+    }
 }

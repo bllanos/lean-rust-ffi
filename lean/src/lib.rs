@@ -24,7 +24,9 @@ mod thread;
 pub use alloc::MimallocAllocator;
 pub use error::{LeanError, LeanInitializationError, LeanIoError};
 pub use module::NoModules;
-pub use result::{LeanIoResult, run_lean_io_unit};
+pub use result::{
+    LeanIoResult, make_lean_io_result_error, make_lean_io_result_ok_unit, run_lean_io_unit,
+};
 pub use runtime::{
     LeanPackage, LeanPackageComponents, Minimal, MinimalComponents, RuntimeImpl,
     RuntimeInitializationError, ThreadRuntimeImpl, args, run_in_lean_runtime,
