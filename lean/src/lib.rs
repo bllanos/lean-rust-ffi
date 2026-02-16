@@ -16,6 +16,7 @@ mod alloc;
 mod error;
 pub mod lean_types;
 mod module;
+pub mod number;
 mod result;
 mod runtime;
 mod sync;

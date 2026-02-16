@@ -4,6 +4,7 @@ use lean_sys::{b_lean_obj_arg, lean_obj_arg, lean_object};
 
 pub mod array;
 pub mod byte_array;
+pub mod external;
 pub mod float_array;
 pub mod object;
 pub mod string;

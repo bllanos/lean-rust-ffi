@@ -2,5 +2,8 @@ import AsyncEffect
 
 @[export concurrent_main]
 def concurrentMain : IO Unit := do
+  let past ← AsyncEffect.IO.monotonicNow
   let now ← AsyncEffect.IO.monotonicNow
-  AsyncEffect.IO.println s!"(Concurrent) Current time: {now}"
+  let elapsed := now - past
+  AsyncEffect.IO.println
+    s!"(Concurrent) Elapsed time: {elapsed.asMilliseconds} milliseconds"

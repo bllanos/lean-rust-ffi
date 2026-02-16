@@ -1,13 +1,18 @@
 module
 
+public import AsyncEffect.Time
+
+open AsyncEffect.Time (Instant)
+
 namespace AsyncEffect
 
 namespace IO
 
 @[extern "async_effect_ffi_monotonic_now_immediate"]
-public opaque monotonicNow : BaseIO Nat
+public opaque monotonicNow : BaseIO Instant
 
-@[extern "async_effect_ffi_println_immediate"] opaque printlnString (s : @& String) : IO Unit
+@[extern "async_effect_ffi_println_immediate"]
+opaque printlnString (s : @& String) : IO Unit
 
 /--
 Converts `s` to a string using its `ToString α` instance, and prints it with a

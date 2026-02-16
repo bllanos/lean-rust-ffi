@@ -245,21 +245,23 @@ The [`lean_build/src/elan_fork/`](lean_build/src/elan_fork) directory contains c
 
 ## References
 
-1. Lean [Foreign Function Interface documentation](https://github.com/leanprover/lean4/blob/master/doc/dev/ffi.md)
+1. Lean [Foreign Function Interface documentation](https://lean-lang.org/doc/reference/latest/Run-Time-Code/Foreign-Function-Interface/#ffi)
 
 2. Lake [Reverse FFI example](https://github.com/leanprover/lean4/tree/14ff08db6f651775ead432d367b6b083878bb0f9/tests/lake/examples/reverse-ffi)
 
 3. Lake [FFI example](https://github.com/leanprover/lean4/tree/14ff08db6f651775ead432d367b6b083878bb0f9/tests/lake/examples/ffi)
 
-4. [`lean-sys` Rust crate](https://github.com/digama0/lean-sys)
+4. Lean [Foreign type example](https://github.com/leanprover/lean4/blob/a166d6ee20ca87302e89b86f9e639889f633829e/tests/compiler/foreign/README.md)
 
-5. [`mimalloc` Rust crate](https://github.com/purpleprotocol/mimalloc_rust)
+5. [`lean-sys` Rust crate](https://github.com/digama0/lean-sys)
 
-6. [The bindgen User Guide](https://rust-lang.github.io/rust-bindgen/)
+6. [`mimalloc` Rust crate](https://github.com/purpleprotocol/mimalloc_rust)
 
-7. [The Rustnomicon](https://doc.rust-lang.org/nomicon/index.html), in particular the [chapter on FFI](https://doc.rust-lang.org/nomicon/ffi.html)
+7. [The bindgen User Guide](https://rust-lang.github.io/rust-bindgen/)
 
-8. [Leo3: Rust Bindings for Lean4](https://github.com/AndPuQing/leo3)
+8. [The Rustnomicon](https://doc.rust-lang.org/nomicon/index.html), in particular the [chapter on FFI](https://doc.rust-lang.org/nomicon/ffi.html)
+
+9. [Leo3: Rust Bindings for Lean4](https://github.com/AndPuQing/leo3)
 
 ## Contact
 

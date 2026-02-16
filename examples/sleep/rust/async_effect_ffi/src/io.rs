@@ -1,14 +1,15 @@
 use async_effect::io;
-use lean::lean_types::{Borrower, string::LeanStr};
+use lean::lean_types::{Borrower, external::ExternalClassHolder, string::LeanStr};
 use lean_sys::{b_lean_obj_arg, lean_obj_res};
+
+use crate::time::LeanInstant;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn async_effect_ffi_monotonic_now_immediate() -> lean_obj_res {
     let now = io::monotonic_now_immediate();
-    // TODO: Return an opaque Instant type and remove sleep
+    // TODO: Remove sleep
     std::thread::sleep(std::time::Duration::from_millis(1002));
-    let count = now.elapsed().as_millis() as u64;
-    unsafe { lean_sys::lean_uint64_to_nat(count) }
+    LeanInstant(now).into_lean_object()
 }
 
 /// Prints a string with a trailing newline to standard output
