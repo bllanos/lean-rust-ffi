@@ -36,6 +36,7 @@ $(OUT_DIR)/main: main.c lake | $(OUT_DIR)
 	cc -o $@ $< -I $(LEAN_SYSROOT)/include \
 		$(MAP_ARRAY_DIR)/.lake/build/lib/libmap_x2darray_MapArray.a \
 		$(LEAN_LIBDIR)/libInit.a \
+		$(LEAN_LIBDIR)/libStd.a \
 		$(LEAN_LIBDIR)/libleanrt.a \
 		$(SYSROOT_LIBDIR)/libuv.a \
 		$(SYSROOT_LIBDIR)/libgmp.a \

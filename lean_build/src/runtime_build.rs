@@ -102,6 +102,7 @@ pub fn build<T: LakeEnvironmentDescriber>(
     );
 
     println!("cargo::rustc-link-lib=static=Init");
+    println!("cargo::rustc-link-lib=static=Std");
     println!("cargo::rustc-link-lib=static=leanrt");
     println!("cargo::rustc-link-lib=static=uv");
     println!("cargo::rustc-link-lib=static=gmp");

@@ -29,8 +29,8 @@ This repository contains Rust [crates](https://doc.rust-lang.org/book/ch07-01-pa
    This project does not have a well-known set of compatible Rust versions. At the time of writing, the Rust version used was:
 
    ```text
-   cargo 1.93.0 (083ac5135 2025-12-15)
-   rustc and rust-std 1.93.0 (254b59607 2026-01-19)
+   cargo 1.93.1 (083ac5135 2025-12-15)
+   rustc and rust-std 1.93.1 (01f6ddf75 2026-02-11)
    ```
 
 2. Install Lean: <https://lean-lang.org/install/manual/>
@@ -40,8 +40,8 @@ This repository contains Rust [crates](https://doc.rust-lang.org/book/ch07-01-pa
    This project does not have a well-known set of compatible Lean versions. At the time of writing, the Lean version used was:
 
    ```text
-   leanprover/lean4:v4.27.0
-   Lean (version 4.27.0, x86_64-unknown-linux-gnu, commit db93fe1608548721853390a10cd40580fe7d22ae, Release)
+   leanprover/lean4:v4.28.0
+   Lean (version 4.28.0, x86_64-unknown-linux-gnu, commit 7e01a1bf5c70fc6167d49c345d3bf80596e9a79b, Release)
    ```
 
 3. Install system dependencies of `bindgen`: <https://rust-lang.github.io/rust-bindgen/requirements.html>
