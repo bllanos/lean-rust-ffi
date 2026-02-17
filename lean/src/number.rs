@@ -86,6 +86,7 @@ mod tests {
             let high_shifted = lean_sys::lean_nat_shiftl(high, shift);
             lean_dec(shift);
             let low = lean_sys::lean_nat_big_sub(nat, high_shifted);
+            lean_dec(nat);
             lean_dec(high_shifted);
             high_u64 = lean_sys::lean_uint64_of_big_nat(high);
             lean_dec(high);
