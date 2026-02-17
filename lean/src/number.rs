@@ -9,8 +9,7 @@ struct U128AsU64Pair {
 impl From<u128> for U128AsU64Pair {
     fn from(n: u128) -> Self {
         let high: u128 = n >> U128AsU64Pair::ELEMENT_BIT_SIZE;
-        let low: u128 =
-            n & (<u64 as Into<u128>>::into(u64::MAX) << U128AsU64Pair::ELEMENT_BIT_SIZE);
+        let low: u128 = n & (<u64 as Into<u128>>::into(u64::MAX));
         Self {
             high: high.try_into().unwrap(),
             low: low.try_into().unwrap(),
@@ -84,8 +83,10 @@ mod tests {
         unsafe {
             let shift = lean_sys::lean_uint32_to_nat(u64::BITS);
             let high = lean_sys::lean_nat_big_shiftr(nat, shift);
+            let high_shifted = lean_sys::lean_nat_shiftl(high, shift);
             lean_dec(shift);
-            let low = lean_sys::lean_nat_big_sub(nat, high);
+            let low = lean_sys::lean_nat_big_sub(nat, high_shifted);
+            lean_dec(high_shifted);
             high_u64 = lean_sys::lean_uint64_of_big_nat(high);
             lean_dec(high);
             low_u64 = lean_sys::lean_uint64_of_big_nat(low);
