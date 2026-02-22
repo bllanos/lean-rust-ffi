@@ -78,6 +78,13 @@ pub fn u128_to_lean_nat(n: u128) -> lean_obj_res {
     U128AsU64Pair::from(n).to_lean_nat()
 }
 
+/// Create a [`u128`] from a Lean `Nat`
+///
+/// # Safety
+///
+/// The argument must be a borrowed Lean `Nat` instance. The numerical value
+/// of the output is limited to [`u128::MAX`] regardless of the value of the
+/// input.
 pub unsafe fn lean_nat_to_u128(nat: b_lean_obj_arg) -> u128 {
     unsafe { U128AsU64Pair::from_lean_nat_unchecked(nat) }.into()
 }

@@ -12,6 +12,9 @@ use super::{
     object::{Obj, Object},
 };
 
+#[cfg(feature = "lean-derive")]
+pub use lean_derive::LeanExternalTypeTag;
+
 /// Traits required to use objects safely from arbitrary Lean code
 ///
 /// Lean programs may use objects from multiple threads.

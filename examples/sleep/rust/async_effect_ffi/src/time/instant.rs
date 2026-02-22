@@ -1,6 +1,5 @@
 use core::ffi::c_void;
 
-use std::iter::Empty;
 use std::time::Instant;
 
 use lean::lean_types::{
@@ -12,15 +11,8 @@ use lean_sys::{b_lean_obj_arg, lean_obj_res};
 
 use super::LeanDuration;
 
+#[derive(LeanExternalTypeTag)]
 pub struct LeanInstant(pub Instant);
-
-unsafe impl LeanExternalTypeTag for LeanInstant {
-    type InternalLeanObjectIterator = Empty<b_lean_obj_arg>;
-
-    fn iter(&self) -> Self::InternalLeanObjectIterator {
-        std::iter::empty()
-    }
-}
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn async_effect_ffi_lean_instant_finalize(instance: *mut c_void) {

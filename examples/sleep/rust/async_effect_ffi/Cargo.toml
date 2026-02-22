@@ -6,5 +6,5 @@ license.workspace = true
 
 [dependencies]
 async-effect = { workspace = true }
-lean = { workspace = true }
+lean = { workspace = true, features = ["derive"] }
 lean-sys = { workspace = true }
