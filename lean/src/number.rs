@@ -1,4 +1,4 @@
-use lean_sys::{lean_dec, lean_obj_res};
+use lean_sys::{b_lean_obj_arg, lean_dec, lean_obj_res};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct U128AsU64Pair {
@@ -46,17 +46,45 @@ impl U128AsU64Pair {
             result
         }
     }
+
+    /// Create an instance from a Lean `Nat`
+    ///
+    /// # Safety
+    ///
+    /// The argument must be a borrowed Lean `Nat` instance. The numerical value
+    /// of the output is limited to [`u128::MAX`] regardless of the value of the
+    /// input.
+    unsafe fn from_lean_nat_unchecked(nat: b_lean_obj_arg) -> Self {
+        let high_u64;
+        let low_u64;
+        // Assume that `lean_uint64_of_big_nat(n)` computes `n % u64::MAX`.
+        unsafe {
+            let shift = lean_sys::lean_uint32_to_nat(u64::BITS);
+            let high = lean_sys::lean_nat_big_shiftr(nat, shift);
+            lean_dec(shift);
+            high_u64 = lean_sys::lean_uint64_of_big_nat(high);
+            lean_dec(high);
+            low_u64 = lean_sys::lean_uint64_of_big_nat(nat);
+        }
+
+        U128AsU64Pair {
+            high: high_u64,
+            low: low_u64,
+        }
+    }
 }
 
 pub fn u128_to_lean_nat(n: u128) -> lean_obj_res {
     U128AsU64Pair::from(n).to_lean_nat()
 }
 
+pub unsafe fn lean_nat_to_u128(nat: b_lean_obj_arg) -> u128 {
+    unsafe { U128AsU64Pair::from_lean_nat_unchecked(nat) }.into()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use lean_sys::lean_obj_arg;
 
     const HIGH: u64 = (1u64 << (u64::BITS - 1)) + 1u64;
     const LOW: u64 = HIGH + (1u64 << (u64::BITS / 2));
@@ -77,30 +105,6 @@ mod tests {
         }
     }
 
-    unsafe fn lean_nat_to_u128(nat: lean_obj_arg) -> u128 {
-        let high_u64;
-        let low_u64;
-        unsafe {
-            let shift = lean_sys::lean_uint32_to_nat(u64::BITS);
-            let high = lean_sys::lean_nat_big_shiftr(nat, shift);
-            let high_shifted = lean_sys::lean_nat_shiftl(high, shift);
-            lean_dec(shift);
-            let low = lean_sys::lean_nat_big_sub(nat, high_shifted);
-            lean_dec(nat);
-            lean_dec(high_shifted);
-            high_u64 = lean_sys::lean_uint64_of_big_nat(high);
-            lean_dec(high);
-            low_u64 = lean_sys::lean_uint64_of_big_nat(low);
-            lean_dec(low);
-        }
-
-        U128AsU64Pair {
-            high: high_u64,
-            low: low_u64,
-        }
-        .into()
-    }
-
     #[test]
     fn from_u128() {
         let pair = make_u128asu64pair();
@@ -116,9 +120,14 @@ mod tests {
     }
 
     #[test]
-    fn test_u128_to_lean_nat() {
+    fn test_u128_to_lean_nat_and_back() {
         let n = make_u128();
         let nat = u128_to_lean_nat(n);
-        assert_eq!(unsafe { lean_nat_to_u128(nat) }, n);
+        let round_trip_n;
+        unsafe {
+            round_trip_n = lean_nat_to_u128(nat);
+            lean_dec(nat);
+        }
+        assert_eq!(round_trip_n, n);
     }
 }

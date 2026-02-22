@@ -78,6 +78,12 @@ pub unsafe extern "C" fn async_effect_ffi_duration_as_millis(d: b_lean_obj_arg) 
     number::u128_to_lean_nat(milliseconds)
 }
 
+/// Create a duration from a number of milliseconds
+#[unsafe(no_mangle)]
+pub extern "C" fn async_effect_ffi_duration_from_millis(millis: u64) -> lean_obj_res {
+    LeanDuration(Duration::from_millis(millis)).into_lean_object()
+}
+
 /// Subtract two durations
 ///
 /// # Safety

@@ -27,6 +27,9 @@ opaque asMillisecondsNumber (d : @& Duration) : Nat
 public def asMilliseconds (d : Duration) : Std.Time.Millisecond.Offset :=
   Std.Time.Millisecond.Offset.ofNat d.asMillisecondsNumber
 
+@[extern "async_effect_ffi_duration_from_millis"]
+public opaque fromMilliseconds (millis : UInt64) : Duration
+
 @[extern "async_effect_ffi_duration_subtract"]
 public opaque subtract (x y : @& Duration) : Duration
 
