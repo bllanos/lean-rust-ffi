@@ -11,7 +11,7 @@ pub enum Notification<'a> {
 impl<'a> Notification<'a> {
     pub fn level(&self) -> NotificationLevel {
         use self::Notification::*;
-        match *self {
+        match self {
             NoCanonicalPath(_) => NotificationLevel::Warn,
         }
     }
@@ -20,7 +20,7 @@ impl<'a> Notification<'a> {
 impl<'a> Display for Notification<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> ::std::result::Result<(), fmt::Error> {
         use self::Notification::*;
-        match *self {
+        match self {
             NoCanonicalPath(path) => write!(f, "could not canonicalize path: '{}'", path.display()),
         }
     }

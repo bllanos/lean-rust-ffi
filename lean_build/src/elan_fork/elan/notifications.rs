@@ -8,16 +8,16 @@ pub enum Notification<'a> {
 }
 
 impl<'a> From<elan_utils::Notification<'a>> for Notification<'a> {
-    fn from(n: elan_utils::Notification<'a>) -> Notification<'a> {
-        Notification::Utils(n)
+    fn from(n: elan_utils::Notification<'a>) -> Self {
+        Self::Utils(n)
     }
 }
 
 impl Notification<'_> {
     pub fn level(&self) -> NotificationLevel {
         use self::Notification::*;
-        match *self {
-            Utils(ref n) => n.level(),
+        match self {
+            Utils(n) => n.level(),
         }
     }
 }
@@ -25,8 +25,8 @@ impl Notification<'_> {
 impl Display for Notification<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> ::std::result::Result<(), fmt::Error> {
         use self::Notification::*;
-        match *self {
-            Utils(ref n) => n.fmt(f),
+        match self {
+            Utils(n) => n.fmt(f),
         }
     }
 }

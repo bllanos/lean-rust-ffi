@@ -30,24 +30,24 @@ pub enum OverrideReason {
 
 impl Display for OverrideReason {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> ::std::result::Result<(), fmt::Error> {
-        match *self {
-            OverrideReason::Environment => {
+        match self {
+            Self::Environment => {
                 write!(f, "environment override by {}", crate::ELAN_TOOLCHAIN)
             }
-            OverrideReason::OverrideDB(ref path) => {
+            Self::OverrideDB(path) => {
                 write!(f, "directory override for '{}'", path.display())
             }
-            OverrideReason::ToolchainFile(ref path) => {
+            Self::ToolchainFile(path) => {
                 write!(f, "overridden by '{}'", path.display())
             }
-            OverrideReason::InToolchainDirectory(ref path) => {
+            Self::InToolchainDirectory(path) => {
                 write!(
                     f,
                     "override because inside toolchain directory '{}'",
                     path.display()
                 )
             }
-            OverrideReason::LeanpkgFile(ref path) => {
+            Self::LeanpkgFile(path) => {
                 write!(f, "overridden by '{}'", path.display())
             }
         }
@@ -133,7 +133,7 @@ impl Cfg {
         // First check ELAN_TOOLCHAIN
         if let Some(ref name) = self.env_override {
             return Ok(Some((
-                lookup_unresolved_toolchain_desc(self, name)?,
+                lookup_unresolved_toolchain_desc(self, name, None)?,
                 OverrideReason::Environment,
             )));
         }
@@ -199,7 +199,7 @@ impl Cfg {
                 {
                     None => {}
                     Some(toml::Value::String(s)) => {
-                        let desc = lookup_unresolved_toolchain_desc(self, s)?;
+                        let desc = lookup_unresolved_toolchain_desc(self, s, None)?;
                         return Ok(Some((desc, OverrideReason::LeanpkgFile(leanpkg_file))));
                     }
                     Some(a) => {
@@ -278,7 +278,7 @@ impl Cfg {
             .ok()
             .and_then(utils::if_not_empty);
 
-        Ok(Cfg {
+        Ok(Self {
             elan_dir,
             settings_file,
             toolchains_dir,

@@ -55,7 +55,18 @@ impl Toolchain {
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnresolvedToolchainDesc(pub ToolchainDesc);
 
-pub fn lookup_unresolved_toolchain_desc(cfg: &Cfg, name: &str) -> Result<UnresolvedToolchainDesc> {
+pub fn lookup_unresolved_toolchain_desc(
+    cfg: &Cfg,
+    name: &str,
+    base_dir: Option<&Path>,
+) -> Result<UnresolvedToolchainDesc> {
+    // Try parsing as a file path first (more specific than regex pattern)
+    let base_dir = base_dir.unwrap_or_else(|| Path::new("."));
+    if let Some(path_desc) = try_parse_path_toolchain(name, base_dir)? {
+        return Ok(UnresolvedToolchainDesc(path_desc));
+    }
+
+    // Fall back to parsing as a toolchain name
     let pattern = r"^(?:([a-zA-Z0-9-_]+[/][a-zA-Z0-9-_]+)[:])?([a-zA-Z0-9-.]+)$";
 
     let re = Regex::new(pattern).unwrap();
@@ -189,7 +200,10 @@ pub fn read_unresolved_toolchain_desc_from_file(
     let s = utils::read_file("toolchain file", toolchain_file)?;
     if let Some(s) = s.lines().next() {
         let toolchain_name = s.trim();
-        lookup_unresolved_toolchain_desc(cfg, toolchain_name)
+
+        let toolchain_file_dir = toolchain_file.parent().unwrap(); // Every file should have a parent
+
+        lookup_unresolved_toolchain_desc(cfg, toolchain_name, Some(toolchain_file_dir))
     } else {
         Err(Error::EmptyToolchainFile {
             path: toolchain_file.to_path_buf(),
@@ -198,5 +212,57 @@ pub fn read_unresolved_toolchain_desc_from_file(
 }
 
 pub fn lookup_toolchain_desc(cfg: &Cfg, name: &str) -> Result<ToolchainDesc> {
-    resolve_toolchain_desc(cfg, &lookup_unresolved_toolchain_desc(cfg, name)?)
+    resolve_toolchain_desc(cfg, &lookup_unresolved_toolchain_desc(cfg, name, None)?)
+}
+
+/// Try to parse a string as a file path, validating it contains a Lean toolchain
+fn try_parse_path_toolchain(
+    path_str: &str,
+    toolchain_file_dir: &Path,
+) -> Result<Option<ToolchainDesc>> {
+    // Try to resolve the path relative to the lean-toolchain file's directory
+    let path = if Path::new(path_str).is_absolute() {
+        PathBuf::from(path_str)
+    } else {
+        toolchain_file_dir.join(path_str)
+    };
+
+    // Validate that bin/lean exists
+    let lean_binary = path
+        .join("bin")
+        .join(format!("lean{}", std::env::consts::EXE_SUFFIX));
+    if !lean_binary.is_file() {
+        return Ok(None); // Not a valid Lean toolchain directory
+    }
+
+    Ok(Some(ToolchainDesc::Path { path }))
+}
+
+// Unit tests in Elan's code that access the filesystem have been removed
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn nonexistent_path_returns_none() {
+        let result =
+            try_parse_path_toolchain("/nonexistent/path/that/does/not/exist", Path::new("/"))
+                .unwrap();
+
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn toolchain_name_not_mistaken_for_path() {
+        // Standard toolchain names must not be treated as paths
+        for name in &[
+            "leanprover/lean4:v4.3.0",
+            "v4.3.0",
+            "nightly-2024-01-01",
+            "stable",
+        ] {
+            let result = try_parse_path_toolchain(name, Path::new("/irrelevant")).unwrap();
+            assert!(result.is_none(), "{name} should not parse as a path");
+        }
+    }
 }

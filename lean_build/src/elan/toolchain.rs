@@ -1,4 +1,5 @@
 use std::fmt;
+use std::path::PathBuf;
 
 use super::ToolchainResolutionError;
 use crate::elan_fork::elan::{Cfg as ElanCfg, OverrideReason, Toolchain};
@@ -6,13 +7,21 @@ use crate::elan_fork::elan_dist::dist::ToolchainDesc;
 
 #[derive(PartialEq, Eq)]
 pub enum LeanToolchainVersion {
+    // A linked toolchain
     Local {
         release: String,
     },
     Remote {
+        // The GitHub source repository
         origin: String,
+        // The release name, usually a Git tag
         resolved_release: String,
+        // The channel name the release was resolved from, if any
         channel: Option<String>,
+    },
+    // A toolchain specified by file path in a `lean-toolchain` file
+    Path {
+        path: PathBuf,
     },
 }
 
@@ -51,6 +60,7 @@ impl From<Toolchain> for LeanToolchainVersion {
                 resolved_release: release,
                 channel: from_channel,
             },
+            ToolchainDesc::Path { path } => Self::Path { path },
         }
     }
 }
@@ -72,6 +82,7 @@ impl fmt::Display for LeanToolchainVersion {
                 channel: None,
             } => write!(f, "release \"{resolved_release}\" from origin \"{origin}\""),
             Self::Local { release } => write!(f, "local release \"{release}\""),
+            Self::Path { path } => write!(f, "local directory \"{}\"", path.display()),
         }
     }
 }
