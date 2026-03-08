@@ -1,7 +1,8 @@
 use std::borrow::Borrow;
 
-use lean_sys::{b_lean_obj_arg, lean_obj_arg, lean_object};
+use lean_sys::{b_lean_obj_arg, lean_mark_mt, lean_mark_persistent, lean_obj_arg, lean_object};
 
+pub mod any;
 pub mod array;
 pub mod byte_array;
 pub mod external;
@@ -67,9 +68,9 @@ pub unsafe trait Owner<T: Borrower>: Reference + Borrow<T> {
     ///
     /// # Safety
     ///
-    /// Callers must ensure that `obj`` has an associated reference counting
-    /// token, points to the same object for the lifetime of the new instance, and
-    /// that the object is of the correct type.
+    /// Callers must ensure that `obj` has an associated reference counting
+    /// token, points to the same object for the lifetime of the new instance,
+    /// and that the object is of the correct type.
     unsafe fn new(obj: lean_obj_arg) -> Self;
 
     /// Transfers this object's reference counting token to the caller
@@ -77,4 +78,44 @@ pub unsafe trait Owner<T: Borrower>: Reference + Borrow<T> {
 
     /// Create a new owning reference to the same Lean object
     fn share(&self) -> Self;
+}
+
+/// Create an instance of an [`Owner`] that wraps an existing object and mark
+/// the object as multi-threaded
+///
+/// # Safety
+///
+/// Callers must ensure that:
+///
+/// 1. `obj` has an associated reference counting token
+/// 2. `obj` points to the same object for the lifetime of the new instance
+/// 3. `obj` is of the correct type
+/// 4. `obj` is not currently marked as persistent
+pub unsafe fn new_multi_threaded<B: Borrower, T: Owner<B>>(obj: lean_obj_arg) -> T {
+    unsafe {
+        // This function is assumed to check if the object is already multi-threaded
+        // See [`object.cpp`](https://github.com/leanprover/lean4/blob/ec565f3bf7a3985b6b8592f5cb5fa063b86a0ecf/src/runtime/object.cpp#L596)
+        lean_mark_mt(obj);
+        T::new(obj)
+    }
+}
+
+/// Create an instance of an [`Owner`] that wraps an existing object and mark
+/// the object as persistent
+///
+/// # Safety
+///
+/// Callers must ensure that:
+///
+/// 1. `obj` has an associated reference counting token
+/// 2. `obj` points to the same object for the lifetime of the new instance
+/// 3. `obj` is of the correct type
+/// 4. It is appropriate for `obj` to be marked as persistent
+pub unsafe fn new_persistent<B: Borrower, T: Owner<B>>(obj: lean_obj_arg) -> T {
+    unsafe {
+        // This function is assumed to check if the object is already persistent
+        // See [`object.cpp`]https://github.com/leanprover/lean4/blob/ec565f3bf7a3985b6b8592f5cb5fa063b86a0ecf/src/runtime/object.cpp#L518)
+        lean_mark_persistent(obj);
+        T::new(obj)
+    }
 }

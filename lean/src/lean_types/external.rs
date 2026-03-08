@@ -1,10 +1,11 @@
 use core::ffi::c_void;
 
+use std::borrow::Borrow;
 use std::marker::PhantomData;
 
 use lean_sys::{
     b_lean_obj_arg, lean_alloc_external, lean_apply_1, lean_dec, lean_external_class,
-    lean_get_external_data, lean_inc, lean_obj_res,
+    lean_get_external_data, lean_inc, lean_is_exclusive, lean_obj_res,
 };
 
 use super::{
@@ -34,6 +35,15 @@ pub unsafe trait LeanExternalTypeTag: ExternalValue {
     /// The items returned by the iterator are assumed to be borrowed objects.
     type InternalLeanObjectIterator: Iterator<Item = b_lean_obj_arg>;
 
+    /// Return an iterator over any Lean objects stored by the object
+    ///
+    /// The Lean runtime will use this function to mark the internal Lean
+    /// objects as multi-threaded or persistent for the purpose of reference
+    /// counting. See
+    /// [`lean.h`](https://github.com/leanprover/lean4/blob/ec565f3bf7a3985b6b8592f5cb5fa063b86a0ecf/src/include/lean/lean.h#L115)
+    /// for documentation on reference counting and
+    /// [`object.cpp`](https://github.com/leanprover/lean4/blob/ec565f3bf7a3985b6b8592f5cb5fa063b86a0ecf/src/runtime/object.cpp)
+    /// for uses of iterators over internal Lean objects (`m_foreach`).
     fn iter(&self) -> Self::InternalLeanObjectIterator;
 }
 
@@ -88,6 +98,12 @@ impl<T: LeanExternalTypeTag> AsRef<T> for Obj<T> {
     }
 }
 
+impl<T: LeanExternalTypeTag> AsRef<T> for Object<T> {
+    fn as_ref(&self) -> &T {
+        <Object<T> as Borrow<Obj<T>>>::borrow(&self).as_ref()
+    }
+}
+
 impl<T: ExternalClassHolder> From<T> for Object<T> {
     fn from(instance: T) -> Self {
         let boxed_instance = Box::new(instance);
@@ -97,6 +113,38 @@ impl<T: ExternalClassHolder> From<T> for Object<T> {
                 Box::into_raw(boxed_instance).cast(),
             );
             Self::new(object)
+        }
+    }
+}
+
+impl<T: Clone + ExternalClassHolder> Obj<T> {
+    pub fn clone_inner(&self) -> T {
+        self.as_ref().clone()
+    }
+}
+
+impl<T: Clone + ExternalClassHolder> Object<T> {
+    pub fn clone_inner(&self) -> T {
+        self.as_ref().clone()
+    }
+
+    /// Destructive update
+    ///
+    /// This function mutates the inner Rust object with `f` and returns
+    /// [`None`] if the object is exclusively owned. Otherwise, it mutates a
+    /// clone of the object and returns the clone wrapped with [`Some`].
+    pub fn clone_on_write<F: for<'a> FnOnce(&'a mut T)>(&mut self, f: F) -> Option<Self> {
+        let inner_lean_object = unsafe { self.as_mut_raw() };
+        let is_exclusive = unsafe { lean_is_exclusive(inner_lean_object) };
+        if is_exclusive {
+            let inner_rust_object =
+                unsafe { &mut *(lean_get_external_data(inner_lean_object).cast::<T>()) };
+            f(inner_rust_object);
+            None
+        } else {
+            let mut cloned_rust_object = self.clone_inner();
+            f(&mut cloned_rust_object);
+            Some(cloned_rust_object.into())
         }
     }
 }

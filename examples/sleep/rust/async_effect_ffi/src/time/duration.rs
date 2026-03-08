@@ -28,14 +28,14 @@ unsafe extern "C" fn async_effect_ffi_lean_duration_foreach(
     unsafe { external::foreach::<LeanDuration>(instance, f) };
 }
 
-static INSTANT_EXTERNAL_CLASS: ExternalClass<LeanDuration> = ExternalClass::new(
+static DURATION_EXTERNAL_CLASS: ExternalClass<LeanDuration> = ExternalClass::new(
     async_effect_ffi_lean_duration_finalize,
     async_effect_ffi_lean_duration_foreach,
 );
 
 impl ExternalClassHolder for LeanDuration {
     fn get_external_class() -> &'static ExternalClass<Self> {
-        &INSTANT_EXTERNAL_CLASS
+        &DURATION_EXTERNAL_CLASS
     }
 }
 

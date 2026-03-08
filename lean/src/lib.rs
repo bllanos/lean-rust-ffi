@@ -1,6 +1,6 @@
 use std::error::Error;
 
-pub use lean_sys::{ELAN_TOOLCHAIN, LEAN_GITHASH, lean_obj_arg, lean_obj_res};
+pub use lean_sys::{ELAN_TOOLCHAIN, LEAN_GITHASH, lean_obj_res};
 
 #[cfg(feature = "lean-derive")]
 pub use lean_derive::Modules;
