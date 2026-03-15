@@ -5,9 +5,15 @@ use lean::lean_types::{
     external::{self, ExternalClass, ExternalClassHolder, LeanExternalTypeTag},
     object::Object,
 };
-use lean_sys::{b_lean_obj_arg, lean_apply_1, lean_obj_arg, lean_obj_res};
+use lean_sys::{
+    b_lean_obj_arg, lean_alloc_ctor, lean_apply_1, lean_box, lean_ctor_set, lean_obj_arg,
+    lean_obj_res,
+};
 
-use async_effect::async_io::AsyncIo;
+use async_effect::{
+    async_io::{AsyncIo, Callback},
+    io::BaseIo,
+};
 
 mod internal_lean_object;
 
@@ -36,6 +42,10 @@ impl LeanAsyncIo {
     pub unsafe fn pure(obj: lean_obj_arg) -> Self {
         let internal_object = unsafe { InternalLeanObject::new(obj) };
         Self(Some(AsyncIo::pure(internal_object)))
+    }
+
+    fn of_base_io<F: BaseIo<InternalLeanObject> + Callback>(io_effect: F) -> Self {
+        Self(Some(AsyncIo::of_base_io(io_effect)))
     }
 
     fn take_inner(&mut self) -> Option<AsyncIo<InternalLeanObject>> {
@@ -168,4 +178,66 @@ pub unsafe extern "C" fn async_effect_ffi_async_io_bind(
             instance,
         )
     }
+}
+
+/// Create a [`LeanAsyncIo`] that runs two instances concurrently
+///
+/// # Safety
+///
+/// Callers must ensure that:
+/// 1. The arguments have associated reference counting tokens
+/// 2. The arguments are Lean external object containing [`LeanAsyncIo`] objects
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn async_effect_ffi_async_io_concurrently(
+    x: lean_obj_arg,
+    y: lean_obj_arg,
+) -> lean_obj_res {
+    unsafe {
+        clone_on_write_async_io(
+            move |async_io_x| {
+                let async_io_y = clone_on_take_async_io(y);
+                AsyncIo::concurrently(async_io_x, async_io_y).map(|(res_x, res_y)| {
+                    // Create a two-element tuple
+                    let res = lean_alloc_ctor(0, 2, 0);
+                    lean_ctor_set(res, 0, res_x.into_raw());
+                    lean_ctor_set(res, 1, res_y.into_raw());
+                    InternalLeanObject::new(res)
+                })
+            },
+            x,
+        )
+    }
+}
+
+/// Create a [`LeanAsyncIo`] by lifting a `BaseIO` monad
+///
+/// # Safety
+///
+/// Callers must ensure that:
+/// 1. `f` has an associated reference counting token
+/// 2. `f` is a Lean closure that accepts a dummy `lean_box(0)` argument and
+///    returns a Lean object containing a Lean IO result
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn async_effect_ffi_async_io_lift_base_io(f: lean_obj_arg) -> lean_obj_res {
+    unsafe {
+        let safe_f = InternalLeanObject::new(f);
+        LeanAsyncIo::of_base_io(move || {
+            let res = lean_apply_1(safe_f.clone().into_raw(), lean_box(0));
+            InternalLeanObject::new(res)
+        })
+    }
+    .into_lean_object()
+}
+
+/// Run a [`LeanAsyncIo`] monad to produce a `BaseIO` monad
+///
+/// # Safety
+///
+/// Callers must ensure that:
+/// 1. `instance` has an associated reference counting token
+/// 2. `instance` is a Lean external object containing a [`LeanAsyncIo`] object
+#[unsafe(no_mangle)]
+pub extern "C" fn async_effect_ffi_async_io_block(instance: lean_obj_arg) -> lean_obj_res {
+    let async_io = unsafe { clone_on_take_async_io(instance) };
+    async_io.block_immediate().into_raw()
 }
