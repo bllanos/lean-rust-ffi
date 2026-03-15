@@ -17,9 +17,10 @@ use internal_lean_object::InternalLeanObject;
 ///
 /// This type assumes that it will not be used as a persistent value by Lean
 /// code, because it marks Lean objects as multi-threaded.
-// The inner field must be [`Some`] at all times. It is an [`Option`] only
-// because [`AsyncIo`] methods take `self` by value whereas the Lean runtime
-// always passes external objects to functions by reference.
+// The inner field must be [`Some`] at all times (except during destruction). It
+// is an [`Option`] only because [`AsyncIo`] methods take `self` by value
+// whereas the Lean runtime always passes external objects to functions by
+// reference.
 #[derive(Clone, LeanExternalTypeTag)]
 pub struct LeanAsyncIo(Option<AsyncIo<InternalLeanObject>>);
 
@@ -35,6 +36,10 @@ impl LeanAsyncIo {
     pub unsafe fn pure(obj: lean_obj_arg) -> Self {
         let internal_object = unsafe { InternalLeanObject::new(obj) };
         Self(Some(AsyncIo::pure(internal_object)))
+    }
+
+    fn take_inner(&mut self) -> Option<AsyncIo<InternalLeanObject>> {
+        self.0.take()
     }
 }
 
@@ -68,8 +73,7 @@ impl ExternalClassHolder for LeanAsyncIo {
 ///
 /// Callers must ensure that:
 /// 1. `instance` has an associated reference counting token
-/// 2. `instance` is a Lean external object containing a [`LeanAsyncIo`]
-///    object
+/// 2. `instance` is a Lean external object containing a [`LeanAsyncIo`] object
 unsafe fn clone_on_write_async_io<
     F: FnOnce(AsyncIo<InternalLeanObject>) -> AsyncIo<InternalLeanObject>,
 >(
@@ -78,9 +82,24 @@ unsafe fn clone_on_write_async_io<
 ) -> lean_obj_res {
     let mut instance_object: Object<LeanAsyncIo> = unsafe { Object::new(instance) };
     let mapped_object = instance_object
-        .clone_on_write(move |lean_async_io| lean_async_io.0 = lean_async_io.0.take().map(f))
+        .clone_on_write(move |lean_async_io| lean_async_io.0 = lean_async_io.take_inner().map(f))
         .unwrap_or(instance_object);
     mapped_object.into_raw()
+}
+
+/// Destructively extract the inner [`AsyncIo`] of a [`LeanAsyncIo`]
+///
+/// # Safety
+///
+/// Callers must ensure that:
+/// 1. `instance` has an associated reference counting token
+/// 2. `instance` is a Lean external object containing a [`LeanAsyncIo`] object
+unsafe fn clone_on_take_async_io(instance: lean_obj_arg) -> AsyncIo<InternalLeanObject> {
+    let mut instance_object: Object<LeanAsyncIo> = unsafe { Object::new(instance) };
+    let mut inner_object = None;
+    // Allow the Lean object's reference count to decrease
+    _ = instance_object.clone_on_write(|lean_async_io| inner_object = lean_async_io.take_inner());
+    inner_object.unwrap()
 }
 
 /// Create an instance storing a value
@@ -143,10 +162,7 @@ pub unsafe extern "C" fn async_effect_ffi_async_io_bind(
             move |async_io| {
                 async_io.bind(move |value| {
                     let res = lean_apply_1(safe_f.clone().into_raw(), value.into_raw());
-                    // It is impossible to move a value out of a Lean-managed
-                    // object, so clone instead
-                    let res_object: LeanAsyncIo = Object::new(res).clone_inner();
-                    res_object.0.unwrap()
+                    clone_on_take_async_io(res)
                 })
             },
             instance,
