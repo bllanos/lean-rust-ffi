@@ -100,7 +100,7 @@ impl<T: LeanExternalTypeTag> AsRef<T> for Obj<T> {
 
 impl<T: LeanExternalTypeTag> AsRef<T> for Object<T> {
     fn as_ref(&self) -> &T {
-        <Object<T> as Borrow<Obj<T>>>::borrow(&self).as_ref()
+        <Object<T> as Borrow<Obj<T>>>::borrow(self).as_ref()
     }
 }
 

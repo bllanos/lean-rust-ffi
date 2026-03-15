@@ -248,7 +248,7 @@ pub unsafe extern "C" fn async_effect_ffi_async_io_lift_base_io(f: lean_obj_arg)
 /// 1. `instance` has an associated reference counting token
 /// 2. `instance` is a Lean external object containing a [`LeanAsyncIo`] object
 #[unsafe(no_mangle)]
-pub extern "C" fn async_effect_ffi_async_io_block(instance: lean_obj_arg) -> lean_obj_res {
+pub unsafe extern "C" fn async_effect_ffi_async_io_block(instance: lean_obj_arg) -> lean_obj_res {
     let async_io = unsafe { clone_on_take_async_io(instance) };
     async_io.block_immediate().into_raw()
 }
@@ -260,7 +260,7 @@ pub extern "C" fn async_effect_ffi_async_io_block(instance: lean_obj_arg) -> lea
 /// Callers must ensure that the safety conditions of
 /// [`sleep::sleep_from_lean_sleep()`] are satisfied.
 #[unsafe(no_mangle)]
-pub extern "C" fn async_effect_ffi_asyncio_from_sleep(sleep: lean_obj_arg) -> lean_obj_res {
+pub unsafe extern "C" fn async_effect_ffi_asyncio_from_sleep(sleep: lean_obj_arg) -> lean_obj_res {
     let sleep = unsafe { sleep::sleep_from_lean_sleep(sleep) };
     <Sleep as Into<LeanAsyncIo>>::into(sleep).into_lean_object()
 }
