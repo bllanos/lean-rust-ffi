@@ -9,6 +9,7 @@ pub mod external;
 pub mod float_array;
 pub mod object;
 pub mod string;
+pub mod unit;
 
 /// A trait implemented by types that point to immutable Lean objects
 ///

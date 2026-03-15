@@ -4,16 +4,19 @@ use lean::lean_types::{
     Owner,
     external::{self, ExternalClass, ExternalClassHolder, LeanExternalTypeTag},
     object::Object,
+    unit,
 };
 use lean_sys::{
-    b_lean_obj_arg, lean_alloc_ctor, lean_apply_1, lean_box, lean_ctor_set, lean_obj_arg,
-    lean_obj_res,
+    b_lean_obj_arg, lean_alloc_ctor, lean_apply_1, lean_ctor_set, lean_obj_arg, lean_obj_res,
 };
 
 use async_effect::{
     async_io::{AsyncIo, Callback},
     io::BaseIo,
+    sleep::Sleep,
 };
+
+use crate::sleep;
 
 mod internal_lean_object;
 
@@ -50,6 +53,14 @@ impl LeanAsyncIo {
 
     fn take_inner(&mut self) -> Option<AsyncIo<InternalLeanObject>> {
         self.0.take()
+    }
+}
+
+impl From<Sleep> for LeanAsyncIo {
+    fn from(sleep: Sleep) -> Self {
+        Self(Some(<Sleep as Into<AsyncIo<()>>>::into(sleep).map(
+            |()| unsafe { InternalLeanObject::new(unit::make_lean_unit()) },
+        )))
     }
 }
 
@@ -215,14 +226,14 @@ pub unsafe extern "C" fn async_effect_ffi_async_io_concurrently(
 ///
 /// Callers must ensure that:
 /// 1. `f` has an associated reference counting token
-/// 2. `f` is a Lean closure that accepts a dummy `lean_box(0)` argument and
-///    returns a Lean object containing a Lean IO result
+/// 2. `f` is a Lean closure that accepts a dummy Lean unit argument and returns
+///    a Lean object containing a Lean IO result
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn async_effect_ffi_async_io_lift_base_io(f: lean_obj_arg) -> lean_obj_res {
     unsafe {
         let safe_f = InternalLeanObject::new(f);
         LeanAsyncIo::of_base_io(move || {
-            let res = lean_apply_1(safe_f.clone().into_raw(), lean_box(0));
+            let res = lean_apply_1(safe_f.clone().into_raw(), unit::make_lean_unit());
             InternalLeanObject::new(res)
         })
     }
@@ -240,4 +251,16 @@ pub unsafe extern "C" fn async_effect_ffi_async_io_lift_base_io(f: lean_obj_arg)
 pub extern "C" fn async_effect_ffi_async_io_block(instance: lean_obj_arg) -> lean_obj_res {
     let async_io = unsafe { clone_on_take_async_io(instance) };
     async_io.block_immediate().into_raw()
+}
+
+/// Construct a [`LeanAsyncIo`] instance from a Lean `Sleep` instance
+///
+/// # Safety
+///
+/// Callers must ensure that the safety conditions of
+/// [`sleep::sleep_from_lean_sleep()`] are satisfied.
+#[unsafe(no_mangle)]
+pub extern "C" fn async_effect_ffi_asyncio_from_sleep(sleep: lean_obj_arg) -> lean_obj_res {
+    let sleep = unsafe { sleep::sleep_from_lean_sleep(sleep) };
+    <Sleep as Into<LeanAsyncIo>>::into(sleep).into_lean_object()
 }

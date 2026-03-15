@@ -50,7 +50,7 @@ pub fn create_module_trait(
 /// #     unsafe fn initialize_modules(
 /// #         _builtin: u8,
 /// #     ) -> lean_sys::lean_obj_res {
-/// #         unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
+/// #         lean::make_lean_io_result_ok_unit()
 /// #     }
 /// # }
 /// #
@@ -64,7 +64,7 @@ pub fn create_module_trait(
 /// #     unsafe fn initialize_modules(
 /// #         _builtin: u8,
 /// #     ) -> lean_sys::lean_obj_res {
-/// #         unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
+/// #         lean::make_lean_io_result_ok_unit()
 /// #     }
 /// # }
 /// #
@@ -79,7 +79,7 @@ pub fn create_module_trait(
 /// #     unsafe fn initialize_modules(
 /// #         _builtin: u8,
 /// #     ) -> lean_sys::lean_obj_res {
-/// #         unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
+/// #         lean::make_lean_io_result_ok_unit()
 /// #     }
 /// # }
 /// #
@@ -112,7 +112,7 @@ pub fn create_module_trait(
 /// #     unsafe fn initialize_modules(
 /// #         _builtin: u8,
 /// #     ) -> lean_sys::lean_obj_res {
-/// #         unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
+/// #         lean::make_lean_io_result_ok_unit()
 /// #     }
 /// # }
 /// #
@@ -126,7 +126,7 @@ pub fn create_module_trait(
 /// #     unsafe fn initialize_modules(
 /// #         _builtin: u8,
 /// #     ) -> lean_sys::lean_obj_res {
-/// #         unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
+/// #         lean::make_lean_io_result_ok_unit()
 /// #     }
 /// # }
 /// #
@@ -141,7 +141,7 @@ pub fn create_module_trait(
 /// #     unsafe fn initialize_modules(
 /// #         _builtin: u8,
 /// #     ) -> lean_sys::lean_obj_res {
-/// #         unsafe { lean_sys::lean_io_result_mk_ok(lean_sys::lean_box(0)) }
+/// #         lean::make_lean_io_result_ok_unit()
 /// #     }
 /// # }
 /// #

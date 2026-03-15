@@ -2,11 +2,11 @@ use std::ffi::CString;
 use std::str::FromStr;
 
 use lean_sys::{
-    lean_box, lean_dec, lean_io_result_is_ok, lean_io_result_mk_error, lean_io_result_mk_ok,
+    lean_dec, lean_io_result_is_ok, lean_io_result_mk_error, lean_io_result_mk_ok,
     lean_mk_io_user_error, lean_mk_string, lean_obj_res,
 };
 
-use crate::LeanIoError;
+use crate::{LeanIoError, lean_types::unit};
 
 pub type LeanIoResult<T> = Result<T, LeanIoError>;
 
@@ -28,7 +28,7 @@ pub unsafe fn run_lean_io_unit<F: FnOnce() -> lean_obj_res>(io_unit: F) -> LeanI
 }
 
 pub fn make_lean_io_result_ok_unit() -> lean_obj_res {
-    unsafe { lean_io_result_mk_ok(lean_box(0)) }
+    unsafe { lean_io_result_mk_ok(unit::make_lean_unit()) }
 }
 
 /// Create a Lean IO result object from a string

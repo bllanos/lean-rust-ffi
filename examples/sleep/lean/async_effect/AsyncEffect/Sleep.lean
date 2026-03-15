@@ -6,6 +6,11 @@ namespace AsyncEffect
 
 open AsyncEffect.Time (Duration)
 
+-- Lean representation of a sleep duration
+--
+-- The FFI representation is the same as `Duration` because the constructor has
+-- a single field.
+-- See <https://lean-lang.org/functional_programming_in_lean/Programming___-Proving___-and-Performance/Special-Types/#runtime-special-types>
 public structure Sleep where
   private duration : Duration
 
