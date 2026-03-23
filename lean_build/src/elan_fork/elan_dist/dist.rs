@@ -29,7 +29,14 @@ pub enum ToolchainDesc {
 
 impl ToolchainDesc {
     pub fn from_resolved_str(name: &str) -> Result<Self> {
-        let pattern = r"^(?:([a-zA-Z0-9-]+[/][a-zA-Z0-9-]+)[:])?([a-zA-Z0-9-.]+)$";
+        // Check for filesystem paths (already resolved to absolute paths)
+        if name.starts_with('/') {
+            return Ok(Self::Path {
+                path: PathBuf::from(name),
+            });
+        }
+
+        let pattern = r"^(?:([a-zA-Z0-9-_]+[/][a-zA-Z0-9-_]+)[:])?([a-zA-Z0-9-.]+)$";
 
         let re = Regex::new(pattern).unwrap();
         let Some(c) = re.captures(name) else {
@@ -143,6 +150,30 @@ mod tests {
             path: "/opt/lean".into(),
         };
         assert_eq!(tc.to_string(), "/opt/lean");
+    }
+
+    #[test]
+    fn parse_absolute_path() {
+        let tc = ToolchainDesc::from_resolved_str("/opt/lean").unwrap();
+        assert_eq!(
+            tc,
+            ToolchainDesc::Path {
+                path: "/opt/lean".into()
+            }
+        );
+    }
+
+    #[test]
+    fn parse_origin_with_underscores() {
+        let tc = ToolchainDesc::from_resolved_str("my_org/my_repo:v1.0.0").unwrap();
+        assert_eq!(
+            tc,
+            ToolchainDesc::Remote {
+                origin: "my_org/my_repo".into(),
+                release: "v1.0.0".into(),
+                from_channel: None,
+            }
+        );
     }
 
     #[test]

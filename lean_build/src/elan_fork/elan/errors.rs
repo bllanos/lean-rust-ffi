@@ -13,8 +13,6 @@ pub enum Error {
     NoLocalToolchains,
     #[error(transparent)]
     LocalToolchainDoesNotMatchRemote(#[from] Box<LocalToolchainDoesNotMatchRemote>),
-    #[error("invalid toolchain name: '{0}'")]
-    InvalidToolchainName(String),
     #[error("override toolchain '{toolchain}' is not installed: {reason_err}")]
     OverrideToolchainNotInstalled {
         toolchain: ToolchainDesc,

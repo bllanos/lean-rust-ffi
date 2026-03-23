@@ -1,7 +1,6 @@
 use std::path::{Path, PathBuf};
 
 use itertools::Itertools;
-use regex::Regex;
 
 use super::super::elan_dist::{dist::ToolchainDesc, manifestation::DEFAULT_ORIGIN};
 use super::super::elan_utils::utils;
@@ -60,56 +59,68 @@ pub fn lookup_unresolved_toolchain_desc(
     name: &str,
     base_dir: Option<&Path>,
 ) -> Result<UnresolvedToolchainDesc> {
-    // Try parsing as a file path first (more specific than regex pattern)
+    // Try parsing as a relative file path first (needs base_dir context)
     let base_dir = base_dir.unwrap_or_else(|| Path::new("."));
     if let Some(path_desc) = try_parse_path_toolchain(name, base_dir)? {
         return Ok(UnresolvedToolchainDesc(path_desc));
     }
 
-    // Fall back to parsing as a toolchain name
-    let pattern = r"^(?:([a-zA-Z0-9-_]+[/][a-zA-Z0-9-_]+)[:])?([a-zA-Z0-9-.]+)$";
+    // Parse the base descriptor (handles absolute paths, origin:release, and bare names)
+    let desc = ToolchainDesc::from_resolved_str(name)?;
 
-    let re = Regex::new(pattern).unwrap();
-    if let Some(c) = re.captures(name) {
-        let mut release = c.get(2).unwrap().as_str().to_owned();
-        let local_tc = Toolchain::from(
-            cfg,
-            &ToolchainDesc::Local {
-                name: release.clone(),
-            },
-        );
-        if local_tc.exists() && local_tc.is_custom() {
-            return Ok(UnresolvedToolchainDesc(ToolchainDesc::Local {
-                name: release,
-            }));
-        }
-        let mut origin = c
-            .get(1)
-            .map(|s| s.as_str())
-            .unwrap_or(DEFAULT_ORIGIN)
-            .to_owned();
-        if release.starts_with("nightly") && !origin.ends_with("-nightly") {
-            origin = format!("{origin}-nightly");
-        }
-        let mut from_channel = None;
-        if release == "lean-toolchain"
-            || release == "stable"
-            || release == "beta"
-            || release == "nightly"
-        {
-            from_channel = Some(release.to_string());
-        }
-        if release.starts_with(char::is_numeric) {
-            release = format!("v{release}")
-        }
-        Ok(UnresolvedToolchainDesc(ToolchainDesc::Remote {
-            origin,
-            release,
-            from_channel,
-        }))
-    } else {
-        Err(Error::InvalidToolchainName(name.to_string()))
+    // Path toolchains (absolute paths) are returned as-is
+    if matches!(desc, ToolchainDesc::Path { .. }) {
+        return Ok(UnresolvedToolchainDesc(desc));
     }
+
+    // Extract the release/name portion for local toolchain check
+    let release_name = match &desc {
+        ToolchainDesc::Local { name } => name.clone(),
+        ToolchainDesc::Remote { release, .. } => release.clone(),
+        _ => unreachable!(),
+    };
+
+    // Check if it matches an existing linked (custom) toolchain
+    let local_tc = Toolchain::from(
+        cfg,
+        &ToolchainDesc::Local {
+            name: release_name.clone(),
+        },
+    );
+    if local_tc.exists() && local_tc.is_custom() {
+        return Ok(UnresolvedToolchainDesc(ToolchainDesc::Local {
+            name: release_name,
+        }));
+    }
+
+    // Build a Remote descriptor with unresolved-specific transformations
+    let (mut origin, mut release) = match desc {
+        ToolchainDesc::Remote {
+            origin, release, ..
+        } => (origin, release),
+        ToolchainDesc::Local { name } => (DEFAULT_ORIGIN.to_owned(), name),
+        _ => unreachable!(),
+    };
+
+    if release.starts_with("nightly") && !origin.ends_with("-nightly") {
+        origin = format!("{origin}-nightly");
+    }
+    let mut from_channel = None;
+    if release == "lean-toolchain"
+        || release == "stable"
+        || release == "beta"
+        || release == "nightly"
+    {
+        from_channel = Some(release.to_string());
+    }
+    if release.starts_with(char::is_numeric) {
+        release = format!("v{release}")
+    }
+    Ok(UnresolvedToolchainDesc(ToolchainDesc::Remote {
+        origin,
+        release,
+        from_channel,
+    }))
 }
 
 fn find_latest_local_toolchain(cfg: &Cfg, channel: &str) -> Option<ToolchainDesc> {
