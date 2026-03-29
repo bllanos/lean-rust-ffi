@@ -2,7 +2,7 @@ import AsyncEffect
 
 import Sleeper
 
-open AsyncEffect.IO (AsyncIO)
+open AsyncEffect.IO (EAsyncIO)
 
 open Sleeper (blockAndPrint sleepAndPrint)
 
@@ -17,7 +17,7 @@ def concurrentMain : IO Unit := do
   let mut action := pure ()
   for i in secondsDurationRange do
     action := do
-      let _ ← AsyncIO.concurrently action (sleepAndPrint i)
+      let _ ← EAsyncIO.concurrently action (sleepAndPrint i)
 
   blockAndPrint action
 
@@ -27,6 +27,5 @@ def concurrentMain : IO Unit := do
   let descendingAction := secondsDurationRange.forM fun x =>
     (sleepAndPrint (maximumSleepTimeSeconds - x))
   let allAction := do
-    let _ ← AsyncIO.concurrentlyAll #[action, ascendingAction, descendingAction]
+    let _ ← EAsyncIO.concurrentlyAll #[action, ascendingAction, descendingAction]
   blockAndPrint allAction
-  pure ()

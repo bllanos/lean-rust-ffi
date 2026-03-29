@@ -28,4 +28,3 @@ def main : IO Unit := do
   let allAction := do
     let _ ← Async.concurrentlyAll #[action, ascendingAction, descendingAction]
   blockAndPrint allAction
-  pure ()
