@@ -16,15 +16,15 @@ def main : IO Unit := do
   let mut action := pure ()
   for i in secondsDurationRange do
     action := do
-      let _ ← Async.concurrently action (Sleeper.sleepAndPrint i)
+      let _ ← Async.concurrently action (sleepAndPrint i)
 
   blockAndPrint action
 
   IO.println "Concurrent sleep operations concurrent with sequential sleep operations"
 
-  let ascendingAction := secondsDurationRange.forM Sleeper.sleepAndPrint
+  let ascendingAction := secondsDurationRange.forM sleepAndPrint
   let descendingAction := secondsDurationRange.forM fun x =>
-    (Sleeper.sleepAndPrint (maximumSleepTimeSeconds - x))
+    (sleepAndPrint (maximumSleepTimeSeconds - x))
   let allAction := do
     let _ ← Async.concurrentlyAll #[action, ascendingAction, descendingAction]
   blockAndPrint allAction

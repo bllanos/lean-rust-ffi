@@ -1,9 +1,16 @@
-import AsyncEffect
+import Sleeper
+
+open Sleeper (blockAndPrint sleepAndPrint)
+
+def maximumSleepTimeSeconds : Nat := 6
+
+def secondsDurationRange := [0:maximumSleepTimeSeconds]
 
 @[export sequential_main]
 def sequentialMain : IO Unit := do
-  let past ← AsyncEffect.IO.monotonicNow
-  let now ← AsyncEffect.IO.monotonicNow
-  let elapsed := now - past
-  AsyncEffect.IO.println
-    s!"(Sequential) Elapsed time: {elapsed.asMilliseconds} milliseconds"
+  AsyncEffect.IO.println "Sequential sleep operations"
+  let ascendingAction := secondsDurationRange.forM sleepAndPrint
+  let descendingAction := secondsDurationRange.forM fun x =>
+    (sleepAndPrint (maximumSleepTimeSeconds - x))
+  let action := ascendingAction >>= fun () => descendingAction
+  blockAndPrint action

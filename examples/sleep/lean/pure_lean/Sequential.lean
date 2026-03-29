@@ -8,8 +8,8 @@ def secondsDurationRange := [0:maximumSleepTimeSeconds]
 
 def main : IO Unit := do
   IO.println "Sequential sleep operations"
-  let ascendingAction := secondsDurationRange.forM Sleeper.sleepAndPrint
+  let ascendingAction := secondsDurationRange.forM sleepAndPrint
   let descendingAction := secondsDurationRange.forM fun x =>
-    (Sleeper.sleepAndPrint (maximumSleepTimeSeconds - x))
+    (sleepAndPrint (maximumSleepTimeSeconds - x))
   let action := ascendingAction >>= fun () => descendingAction
   blockAndPrint action

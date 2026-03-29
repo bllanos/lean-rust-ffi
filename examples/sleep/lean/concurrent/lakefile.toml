@@ -1,5 +1,5 @@
 name = "concurrent"
-version = "0.1.0"
+versionTags = []
 licenseFiles = ["../../../../LICENSE-APACHE", "../../../../LICENSE-MIT"]
 
 [[lean_lib]]
@@ -7,7 +7,6 @@ name = "Concurrent"
 buildType = "release"
 defaultFacets = ["static"]
 
-# TODO only Sleeper should directly depend on this package. Depend on Sleeper here instead.
 [[require]]
-name = "async-effect"
-path = "../async_effect"
+name = "sleeper"
+path = "../sleeper"
