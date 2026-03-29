@@ -2,6 +2,7 @@ use core::ffi::c_void;
 
 use lean::lean_types::{
     Owner,
+    any::LeanAnyObject,
     external::{self, ExternalClass, ExternalClassHolder, LeanExternalTypeTag},
     object::Object,
     unit,
@@ -245,10 +246,17 @@ pub unsafe extern "C" fn async_effect_ffi_async_io_lift_base_io(f: lean_obj_arg)
 /// # Safety
 ///
 /// Callers must ensure that:
-/// 1. `instance` has an associated reference counting token
-/// 2. `instance` is a Lean external object containing a [`LeanAsyncIo`] object
+/// 1. The arguments have associated reference counting tokens
+/// 2. `inhabited_a` is an instance of the Lean `Inhabited` typeclass for the
+///    type of value Lean code has stored in the [`LeanAsyncIo`] monad
+/// 3. `instance` is a Lean external object containing a [`LeanAsyncIo`] object
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn async_effect_ffi_async_io_block(instance: lean_obj_arg) -> lean_obj_res {
+pub unsafe extern "C" fn async_effect_ffi_async_io_block(
+    inhabited_a: lean_obj_arg,
+    instance: lean_obj_arg,
+) -> lean_obj_res {
+    // Allow the unused `Inhabited` instance's reference count to decrease
+    _ = unsafe { LeanAnyObject::new(inhabited_a) };
     let async_io = unsafe { clone_on_take_async_io(instance) };
     async_io.block_immediate().into_raw()
 }

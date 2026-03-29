@@ -7,8 +7,6 @@ use crate::time::LeanInstant;
 #[unsafe(no_mangle)]
 pub extern "C" fn async_effect_ffi_monotonic_now_immediate() -> lean_obj_res {
     let now = io::monotonic_now_immediate();
-    // TODO: Remove sleep
-    std::thread::sleep(std::time::Duration::from_millis(1002));
     LeanInstant(now).into_lean_object()
 }
 
