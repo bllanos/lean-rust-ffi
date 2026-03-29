@@ -9,7 +9,7 @@ use syn::{
     spanned::Spanned,
 };
 
-use lean_macro_internals::parse;
+use crate::parse;
 
 pub struct CombineLeanModuleInitializers {
     visibility: Visibility,

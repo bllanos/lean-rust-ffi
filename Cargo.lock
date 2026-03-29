@@ -241,17 +241,7 @@ name = "lean-macro"
 version = "0.1.0"
 dependencies = [
  "lean",
- "lean-macro-internals",
  "lean-sys",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "lean-macro-internals"
-version = "0.1.0"
-dependencies = [
  "proc-macro2",
  "quote",
  "syn",

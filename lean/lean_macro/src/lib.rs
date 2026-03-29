@@ -2,6 +2,7 @@ use syn::parse_macro_input;
 
 mod combine_lean_module_initializers;
 mod create_module_trait;
+mod parse;
 
 use combine_lean_module_initializers::CombineLeanModuleInitializers;
 

@@ -16,7 +16,6 @@ members = [
   "lean",
   "lean/lean_derive",
   "lean/lean_macro",
-  "lean/lean_macro_internals",
   "lean_build",
   "lean_sys",
 ]
@@ -41,7 +40,6 @@ lean = { path = "lean" }
 lean-build = { path = "lean_build" }
 lean-derive = { path = "lean/lean_derive" }
 lean-macro = { path = "lean/lean_macro" }
-lean-macro-internals = { path = "lean/lean_macro_internals" }
 lean-sys = { path = "lean_sys" }
 map-array = { path = "examples/map_array/rust/map_array" }
 map-array-sys = { path = "examples/map_array/rust/map_array_sys" }

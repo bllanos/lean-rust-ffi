@@ -2,7 +2,7 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::{TokenStreamExt, quote};
 use syn::{DeriveInput, spanned::Spanned};
 
-use lean_macro_internals::parse;
+use crate::parse;
 
 const ATTRIBUTE_DESCRIPTION: &str = "`create_module_trait` attribute";
 
