@@ -6,6 +6,7 @@ license.workspace = true
 
 [dependencies]
 lean-sys = { workspace = true }
+sleeper-sys = { workspace = true }
 
 [build-dependencies]
 anyhow = { workspace = true }

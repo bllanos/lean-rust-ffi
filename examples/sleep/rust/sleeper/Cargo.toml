@@ -6,9 +6,6 @@ license.workspace = true
 
 [dependencies]
 anyhow = { workspace = true }
-# TODO replace async-effect* dependencies with dependencies on sleeper-sys
-async-effect-ffi = { workspace = true }
-async-effect-sys = { workspace = true }
 concurrent-sys = { workspace = true }
 lean = { workspace = true }
 lean-sys = { workspace = true }

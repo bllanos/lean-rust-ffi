@@ -18,7 +18,7 @@ members = [
   "lean/lean_macro",
   "lean/lean_macro_internals",
   "lean_build",
-  "lean_sys"
+  "lean_sys",
 ]
 
 [workspace.package]
@@ -50,7 +50,7 @@ quote = "1.0.41"
 regex = "1.11.1"
 semver = "1.0.26"
 sequential-sys = { path = "examples/sleep/rust/sequential_sys" }
-sleeper = { path = "examples/sleep/rust/sleeper" }
+sleeper-lean = { path = "examples/sleep/rust/sleeper" }
 sleeper-sys = { path = "examples/sleep/rust/sleeper_sys" }
 syn = { version = "2.0.106", default-features = false }
 thiserror = "2.0.12"

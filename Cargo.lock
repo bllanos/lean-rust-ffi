@@ -35,6 +35,7 @@ name = "async-effect-sys"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-effect-ffi",
  "examples-build-infrastructure",
  "lean-sys",
 ]
@@ -107,6 +108,7 @@ dependencies = [
  "anyhow",
  "examples-build-infrastructure",
  "lean-sys",
+ "sleeper-sys",
 ]
 
 [[package]]
@@ -441,6 +443,7 @@ dependencies = [
  "anyhow",
  "examples-build-infrastructure",
  "lean-sys",
+ "sleeper-sys",
 ]
 
 [[package]]
@@ -483,8 +486,6 @@ name = "sleeper-lean"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-effect-ffi",
- "async-effect-sys",
  "concurrent-sys",
  "lean",
  "lean-sys",
@@ -503,6 +504,7 @@ name = "sleeper-sys"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-effect-sys",
  "examples-build-infrastructure",
  "lean-sys",
 ]

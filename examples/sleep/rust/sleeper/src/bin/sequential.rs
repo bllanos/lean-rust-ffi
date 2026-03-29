@@ -1,9 +1,5 @@
 use anyhow::Context;
 
-// Force linking of this crate even though there is no direct reference to it
-// from Rust code
-extern crate sleeper_lean;
-
 use lean::{MimallocAllocator, args, run_lean_io_unit};
 use lean_sys::{
     lean_finalize_task_manager, lean_init_task_manager, lean_initialize_runtime_module,

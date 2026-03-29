@@ -12,7 +12,7 @@ namespace IO
 public opaque monotonicNow : BaseIO Instant
 
 @[extern "async_effect_ffi_println_immediate"]
-opaque printlnString (s : @& String) : IO Unit
+public opaque printlnString (s : @& String) : IO Unit
 
 /--
 Converts `s` to a string using its `ToString α` instance, and prints it with a
