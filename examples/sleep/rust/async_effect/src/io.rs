@@ -7,7 +7,25 @@ use std::time::Instant;
 /// representing the world. It is equivalent to Lean's `IO.RealWorld`, which is
 /// erased when Lean code is compiled. In other words, `Fn() -> T` should be
 /// used as though it is `Fn(IoRealWorld) -> (IoRealWorld, T)` for some
-/// non-clonable type `IoRealWorld`.
+/// non-cloneable type `IoRealWorld`.
+///
+/// There are two ways to model IO monads:
+///
+/// 1. `Fn() -> T`: Such functions must clone any resources they own each time
+///    they are invoked, otherwise they cannot implement the `Fn` trait, which
+///    requires that it be possible for them to be invoked multiple times.
+///
+/// 2. `(FnOnce() -> T) + Clone`: Such functions must be cloned (i.e. cloning
+///    their resources) by the caller in order to be invoked multiple times.
+///
+/// The second approach is preferable because it does not incur the cost of
+/// cloning unless the function is invoked more than once. Unfortunately,
+/// [`Clone`] is not dyn-compatible, so the first approach was chosen because it
+/// is more flexible.
+///
+/// Note that `FnMut() -> T` would violate referential transparency by mutating
+/// its resources, which makes it unsuitable for modelling pure functional
+/// programming.
 pub trait BaseIo<T>: Fn() -> T {}
 
 impl<T, F: Fn() -> T> BaseIo<T> for F {}
