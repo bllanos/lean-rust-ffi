@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use crate::{
     io::BaseIo,
-    sleep::{self, ConcurrentOrder, Sleep},
+    sleep::{self, Sleep, SleepOrdering},
 };
 
 /// A trait bound on the type parameter of [`AsyncIo`] that ensures that
@@ -77,7 +77,7 @@ impl<T: Value> DeferredEffect<T> {
     pub fn concurrently<U: Value>(self, y: Inner<U>) -> Inner<(T, U)> {
         match y {
             Inner::Effect(effect) => match Sleep::concurrently(self.sleep, effect.sleep) {
-                ConcurrentOrder::Equal(sleep) => Inner::Effect(DeferredEffect {
+                SleepOrdering::Equal(sleep) => Inner::Effect(DeferredEffect {
                     sleep,
                     next: Arc::new(move || {
                         let first = (self.next.clone())();
@@ -85,7 +85,7 @@ impl<T: Value> DeferredEffect<T> {
                         Inner::concurrently(first, second)
                     }),
                 }),
-                ConcurrentOrder::SameOrder(first_sleep, second_sleep) => {
+                SleepOrdering::SameOrder(first_sleep, second_sleep) => {
                     Inner::Effect(DeferredEffect {
                         sleep: first_sleep,
                         next: Arc::new(move || {
@@ -100,7 +100,7 @@ impl<T: Value> DeferredEffect<T> {
                         }),
                     })
                 }
-                ConcurrentOrder::ReverseOrder(first_sleep, second_sleep) => {
+                SleepOrdering::ReverseOrder(first_sleep, second_sleep) => {
                     Inner::Effect(DeferredEffect {
                         sleep: first_sleep,
                         next: Arc::new(move || {
@@ -137,6 +137,69 @@ impl<T: Value> DeferredEffect<T> {
                     Inner::concurrently(first, Inner::Pure(effect.clone()))
                 }),
             }),
+        }
+    }
+
+    pub fn select<U: Value>(self, y: Inner<U>) -> Inner<ConcurrentOrderInner<T, U>> {
+        match y {
+            Inner::Effect(effect) => match Sleep::concurrently(self.sleep, effect.sleep) {
+                SleepOrdering::Equal(sleep) => Inner::Effect(DeferredEffect {
+                    sleep,
+                    next: Arc::new(move || {
+                        let first = (self.next.clone())();
+                        let second = (effect.next.clone())();
+                        Inner::select(first, second)
+                    }),
+                }),
+                SleepOrdering::SameOrder(first_sleep, second_sleep) => {
+                    Inner::Effect(DeferredEffect {
+                        sleep: first_sleep,
+                        next: Arc::new(move || {
+                            let first = (self.next.clone())();
+                            Inner::select(
+                                first,
+                                Inner::Effect(DeferredEffect {
+                                    sleep: second_sleep,
+                                    next: effect.next.clone(),
+                                }),
+                            )
+                        }),
+                    })
+                }
+                SleepOrdering::ReverseOrder(first_sleep, second_sleep) => {
+                    Inner::Effect(DeferredEffect {
+                        sleep: first_sleep,
+                        next: Arc::new(move || {
+                            let second = (effect.next.clone())();
+                            Inner::select(
+                                Inner::Effect(DeferredEffect {
+                                    sleep: second_sleep,
+                                    next: self.next.clone(),
+                                }),
+                                second,
+                            )
+                        }),
+                    })
+                }
+            },
+            Inner::Io(effect) => Inner::Io(DeferredIo {
+                io: effect.io,
+                next: Arc::new(move |io_value| {
+                    let second = (effect.next.clone())(io_value);
+                    Inner::select(Inner::Effect(self.clone()), second)
+                }),
+            }),
+            Inner::Bind(effect) => Inner::Bind(DeferredBind {
+                value: effect.value,
+                next: Arc::new(move |second_value| {
+                    let second = (effect.next.clone())(second_value);
+                    Inner::select(Inner::Effect(self.clone()), second)
+                }),
+            }),
+            Inner::Pure(effect) => Inner::Pure(Pure::new(ConcurrentOrderInner::Second(
+                Inner::Effect(self),
+                effect.value,
+            ))),
         }
     }
 }
@@ -215,6 +278,54 @@ impl<T: Value> DeferredIo<T> {
             }),
         }
     }
+
+    pub fn select<U: Value>(self, y: Inner<U>) -> Inner<ConcurrentOrderInner<T, U>> {
+        match y {
+            Inner::Effect(effect) => Inner::Io(DeferredIo {
+                io: self.io,
+                next: Arc::new(move |io_value| {
+                    let first = (self.next.clone())(io_value);
+                    Inner::select(first, Inner::Effect(effect.clone()))
+                }),
+            }),
+            Inner::Io(effect) => Inner::Io(DeferredIo {
+                io: Arc::new(move || {
+                    let first_value = (self.io.clone())();
+                    let second_value = (effect.io.clone())();
+                    Arc::new((first_value, second_value))
+                }),
+                next: Arc::new(move |io_arc_pair| {
+                    let io_any_pair: &dyn Any = &*io_arc_pair;
+                    match io_any_pair
+                        .downcast_ref::<(Arc<dyn DynamicValue>, Arc<dyn DynamicValue>)>()
+                    {
+                        Some((first_io_arc_value, second_io_arc_value)) => {
+                            let first = (self.next.clone())(first_io_arc_value.clone());
+                            let second = (effect.next.clone())(second_io_arc_value.clone());
+                            Inner::select(first, second)
+                        }
+                        None => {
+                            unreachable!("bad dynamic cast of select IO effects' return values");
+                        }
+                    }
+                }),
+            }),
+            Inner::Bind(effect) => Inner::Io(DeferredIo {
+                io: self.io,
+                next: Arc::new(move |io_value| {
+                    let first = (self.next.clone())(io_value);
+                    Inner::select(first, Inner::Bind(effect.clone()))
+                }),
+            }),
+            Inner::Pure(effect) => Inner::Io(DeferredIo {
+                io: self.io,
+                next: Arc::new(move |io_value| {
+                    let first = (self.next.clone())(io_value);
+                    Inner::select(first, Inner::Pure(effect.clone()))
+                }),
+            }),
+        }
+    }
 }
 
 impl<T: Value> DeferredBind<T> {
@@ -266,6 +377,50 @@ impl<T: Value> DeferredBind<T> {
             }),
         }
     }
+
+    pub fn select<U: Value>(self, y: Inner<U>) -> Inner<ConcurrentOrderInner<T, U>> {
+        match y {
+            Inner::Effect(effect) => Inner::Bind(DeferredBind {
+                value: self.value,
+                next: Arc::new(move |value| {
+                    let first = (self.next.clone())(value);
+                    Inner::select(first, Inner::Effect(effect.clone()))
+                }),
+            }),
+            Inner::Io(effect) => Inner::Io(DeferredIo {
+                io: effect.io,
+                next: Arc::new(move |io_value| {
+                    let second = (effect.next.clone())(io_value);
+                    Inner::select(Inner::Bind(self.clone()), second)
+                }),
+            }),
+            Inner::Bind(effect) => Inner::Bind(DeferredBind {
+                value: Arc::new((self.value, effect.value)),
+                next: Arc::new(move |value_arc_pair| {
+                    let value_arc_pair: &dyn Any = &*value_arc_pair;
+                    match value_arc_pair
+                        .downcast_ref::<(Arc<dyn DynamicValue>, Arc<dyn DynamicValue>)>()
+                    {
+                        Some((first_arc_value, second_arc_value)) => {
+                            let first = (self.next.clone())(first_arc_value.clone());
+                            let second = (effect.next.clone())(second_arc_value.clone());
+                            Inner::select(first, second)
+                        }
+                        None => {
+                            unreachable!("bad dynamic cast of select bind effects' values");
+                        }
+                    }
+                }),
+            }),
+            Inner::Pure(effect) => Inner::Bind(DeferredBind {
+                value: self.value,
+                next: Arc::new(move |value| {
+                    let first = (self.next.clone())(value);
+                    Inner::select(first, Inner::Pure(effect.clone()))
+                }),
+            }),
+        }
+    }
 }
 
 impl<T: Value> Pure<T> {
@@ -310,11 +465,42 @@ impl<T: Value> Pure<T> {
             Inner::Pure(effect) => Inner::Pure(Pure::new((self.value, effect.value))),
         }
     }
+
+    pub fn select<U: Value>(self, y: Inner<U>) -> Inner<ConcurrentOrderInner<T, U>> {
+        match y {
+            Inner::Effect(_) => Inner::Pure(Pure::new(ConcurrentOrderInner::First(self.value, y))),
+            Inner::Io(effect) => Inner::Io(DeferredIo {
+                io: effect.io,
+                next: Arc::new(move |io_value| {
+                    let second = (effect.next.clone())(io_value);
+                    Inner::select(Inner::Pure(self.clone()), second)
+                }),
+            }),
+            Inner::Bind(effect) => Inner::Bind(DeferredBind {
+                value: effect.value,
+                next: Arc::new(move |value| {
+                    let second = (effect.next.clone())(value);
+                    Inner::select(Inner::Pure(self.clone()), second)
+                }),
+            }),
+            Inner::Pure(effect) => Inner::Pure(Pure::new(ConcurrentOrderInner::Both(
+                self.value,
+                effect.value,
+            ))),
+        }
+    }
 }
 
 enum Next<T: Value> {
     More(Inner<T>),
     End(T),
+}
+
+#[derive(Clone)]
+enum ConcurrentOrderInner<T: Value, U: Value> {
+    First(T, Inner<U>),
+    Both(T, U),
+    Second(Inner<T>, U),
 }
 
 impl<T: Value> Inner<T> {
@@ -403,6 +589,15 @@ impl<T: Value> Inner<T> {
             Self::Pure(effect) => effect.concurrently(y),
         }
     }
+
+    pub fn select<U: Value>(x: Self, y: Inner<U>) -> Inner<ConcurrentOrderInner<T, U>> {
+        match x {
+            Self::Effect(effect) => effect.select(y),
+            Self::Io(effect) => effect.select(y),
+            Self::Bind(effect) => effect.select(y),
+            Self::Pure(effect) => effect.select(y),
+        }
+    }
 }
 
 impl Inner<()> {
@@ -433,6 +628,29 @@ impl From<Sleep> for Inner<()> {
     fn from(sleep: Sleep) -> Self {
         Self::Effect(sleep.into())
     }
+}
+
+#[derive(Clone)]
+pub enum ConcurrentOrder<T: Value, U: Value> {
+    First(T, AsyncIo<U>),
+    Both(T, U),
+    Second(AsyncIo<T>, U),
+}
+
+impl<T: Value, U: Value> From<ConcurrentOrderInner<T, U>> for ConcurrentOrder<T, U> {
+    fn from(value: ConcurrentOrderInner<T, U>) -> Self {
+        match value {
+            ConcurrentOrderInner::First(a, y) => Self::First(a, AsyncIo(y)),
+            ConcurrentOrderInner::Both(a, b) => Self::Both(a, b),
+            ConcurrentOrderInner::Second(x, b) => Self::Second(AsyncIo(x), b),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub enum MaybeAsyncIo<T: Value> {
+    Ready(T),
+    Pending(AsyncIo<T>),
 }
 
 #[derive(Clone)]
@@ -467,6 +685,13 @@ impl<T: Value> AsyncIo<T> {
         AsyncIo(Inner::concurrently(x.0, y.0))
     }
 
+    pub fn select<U: Value>(x: Self, y: AsyncIo<U>) -> AsyncIo<ConcurrentOrder<T, U>> {
+        AsyncIo(
+            Inner::select(x.0, y.0)
+                .map(<ConcurrentOrderInner<T, U> as Into<ConcurrentOrder<T, U>>>::into),
+        )
+    }
+
     pub fn concurrently_all<I: IntoIterator<Item = Self>>(collection: I) -> AsyncIo<Vec<T>> {
         collection
             .into_iter()
@@ -476,6 +701,40 @@ impl<T: Value> AsyncIo<T> {
                     v
                 })
             })
+    }
+
+    fn select_all_iterator<I: Iterator<Item = Self>>(mut iter: I) -> AsyncIo<Vec<MaybeAsyncIo<T>>> {
+        let first = iter.next();
+        match first {
+            None => AsyncIo::pure(Vec::new()),
+            Some(x) => {
+                let rest = Self::select_all_iterator(iter);
+                Self::select(x, rest).bind(|order| match order {
+                    ConcurrentOrder::First(a, y) => y.map(move |mut v| {
+                        v.push(MaybeAsyncIo::Ready(a.clone()));
+                        v
+                    }),
+                    ConcurrentOrder::Both(a, mut v) => {
+                        v.push(MaybeAsyncIo::Ready(a));
+                        AsyncIo::pure(v)
+                    }
+                    ConcurrentOrder::Second(x, v) => x.map(move |a| {
+                        let mut v = v.clone();
+                        v.push(MaybeAsyncIo::Ready(a));
+                        v
+                    }),
+                })
+            }
+        }
+    }
+
+    pub fn select_all<I: IntoIterator<Item = Self>>(
+        collection: I,
+    ) -> AsyncIo<Vec<MaybeAsyncIo<T>>> {
+        Self::select_all_iterator(collection.into_iter()).map(|mut v| {
+            v.reverse();
+            v
+        })
     }
 }
 

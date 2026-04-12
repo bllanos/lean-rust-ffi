@@ -3,7 +3,7 @@ use std::thread;
 use std::time::Duration;
 
 #[derive(Clone, Copy)]
-pub enum ConcurrentOrder {
+pub enum SleepOrdering {
     Equal(Sleep),
     SameOrder(Sleep, Sleep),
     ReverseOrder(Sleep, Sleep),
@@ -27,16 +27,16 @@ impl Sleep {
         Self::new(Duration::from_millis(sleep_duration_milliseconds.into()))
     }
 
-    pub fn concurrently(first: Sleep, second: Sleep) -> ConcurrentOrder {
+    pub fn concurrently(first: Sleep, second: Sleep) -> SleepOrdering {
         match first.cmp(&second) {
-            Ordering::Equal => ConcurrentOrder::Equal(first),
-            Ordering::Less => ConcurrentOrder::SameOrder(
+            Ordering::Equal => SleepOrdering::Equal(first),
+            Ordering::Less => SleepOrdering::SameOrder(
                 first,
                 Self {
                     sleep_duration: second.sleep_duration - first.sleep_duration,
                 },
             ),
-            Ordering::Greater => ConcurrentOrder::ReverseOrder(
+            Ordering::Greater => SleepOrdering::ReverseOrder(
                 second,
                 Self {
                     sleep_duration: first.sleep_duration - second.sleep_duration,

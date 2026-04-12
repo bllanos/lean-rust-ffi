@@ -12,7 +12,7 @@ use lean_sys::{
 };
 
 use async_effect::{
-    async_io::{AsyncIo, Callback},
+    async_io::{AsyncIo, Callback, ConcurrentOrder},
     io::BaseIo,
     sleep::Sleep,
 };
@@ -22,6 +22,34 @@ use crate::sleep;
 mod internal_lean_object;
 
 use internal_lean_object::InternalLeanObject;
+
+fn into_lean_concurrent_order(
+    order: ConcurrentOrder<InternalLeanObject, InternalLeanObject>,
+) -> InternalLeanObject {
+    unsafe {
+        let res = match order {
+            ConcurrentOrder::First(a, y) => {
+                let res = lean_alloc_ctor(0, 2, 0);
+                lean_ctor_set(res, 0, a.into_raw());
+                lean_ctor_set(res, 1, LeanAsyncIo::from(y).into_lean_object());
+                res
+            }
+            ConcurrentOrder::Both(a, b) => {
+                let res = lean_alloc_ctor(1, 2, 0);
+                lean_ctor_set(res, 0, a.into_raw());
+                lean_ctor_set(res, 1, b.into_raw());
+                res
+            }
+            ConcurrentOrder::Second(x, b) => {
+                let res = lean_alloc_ctor(2, 2, 0);
+                lean_ctor_set(res, 0, LeanAsyncIo::from(x).into_lean_object());
+                lean_ctor_set(res, 1, b.into_raw());
+                res
+            }
+        };
+        InternalLeanObject::new(res)
+    }
+}
 
 /// An [`AsyncIo`] that holds a Lean object
 ///
@@ -54,6 +82,12 @@ impl LeanAsyncIo {
 
     fn take_inner(&mut self) -> Option<AsyncIo<InternalLeanObject>> {
         self.0.take()
+    }
+}
+
+impl From<AsyncIo<InternalLeanObject>> for LeanAsyncIo {
+    fn from(async_io: AsyncIo<InternalLeanObject>) -> Self {
+        Self(Some(async_io))
     }
 }
 
@@ -192,7 +226,8 @@ pub unsafe extern "C" fn async_effect_ffi_async_io_bind(
     }
 }
 
-/// Create a [`LeanAsyncIo`] that runs two instances concurrently
+/// Create a [`LeanAsyncIo`] that runs two instances concurrently until both are
+/// finished
 ///
 /// # Safety
 ///
@@ -215,6 +250,30 @@ pub unsafe extern "C" fn async_effect_ffi_async_io_concurrently(
                     lean_ctor_set(res, 1, res_y.into_raw());
                     InternalLeanObject::new(res)
                 })
+            },
+            x,
+        )
+    }
+}
+
+/// Create a [`LeanAsyncIo`] that runs two instances concurrently until at least
+/// one of them is finished
+///
+/// # Safety
+///
+/// Callers must ensure that:
+/// 1. The arguments have associated reference counting tokens
+/// 2. The arguments are Lean external object containing [`LeanAsyncIo`] objects
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn async_effect_ffi_async_io_select(
+    x: lean_obj_arg,
+    y: lean_obj_arg,
+) -> lean_obj_res {
+    unsafe {
+        clone_on_write_async_io(
+            move |async_io_x| {
+                let async_io_y = clone_on_take_async_io(y);
+                AsyncIo::select(async_io_x, async_io_y).map(into_lean_concurrent_order)
             },
             x,
         )
