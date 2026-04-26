@@ -10,3 +10,4 @@ concurrent-sys = { workspace = true }
 lean = { workspace = true }
 lean-sys = { workspace = true }
 sequential-sys = { workspace = true }
+short-circuit-sys = { workspace = true }

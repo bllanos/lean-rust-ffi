@@ -23,6 +23,11 @@ public def sleepAndPrint (sleepDurationSeconds : Nat) : Async Unit := do
   let (elapsedTimeSeconds, elapsedTimeRemainder) := formatElapsedTime startTime endTime
   IO.println s!"Called sleep for {sleepDurationSeconds} seconds (actual sleep duration {elapsedTimeSeconds} seconds {elapsedTimeRemainder} milliseconds)"
 
+public def sleepAndPrintError (sleepDurationSeconds : Nat) : Async Unit := do
+  sleepAndPrint sleepDurationSeconds
+  IO.println s!"Raising error after {sleepDurationSeconds} seconds sleep call"
+  throw (IO.userError s!"Error after {sleepDurationSeconds} seconds sleep call")
+
 public def blockAndPrint (action: Async Unit) : IO Unit := do
   let startTime ← IO.monoMsNow
   Async.block action

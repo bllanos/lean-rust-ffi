@@ -472,6 +472,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
+name = "short-circuit-sys"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "examples-build-infrastructure",
+ "lean-sys",
+ "sleeper-sys",
+]
+
+[[package]]
 name = "sleeper-lean"
 version = "0.1.0"
 dependencies = [
@@ -480,6 +490,7 @@ dependencies = [
  "lean",
  "lean-sys",
  "sequential-sys",
+ "short-circuit-sys",
 ]
 
 [[package]]

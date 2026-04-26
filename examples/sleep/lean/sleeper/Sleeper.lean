@@ -22,6 +22,11 @@ public def sleepAndPrint (sleepDurationSeconds : Nat) : EAsyncIO IO.Error Unit :
   let (elapsedTimeSeconds, elapsedTimeRemainder) := formatElapsedTime startTime endTime
   println s!"Called sleep for {sleepDurationSeconds} seconds (actual sleep duration {elapsedTimeSeconds} seconds {elapsedTimeRemainder} milliseconds)"
 
+public def sleepAndPrintError (sleepDurationSeconds : Nat) : EAsyncIO IO.Error Unit := do
+  sleepAndPrint sleepDurationSeconds
+  println s!"Raising error after {sleepDurationSeconds} seconds sleep call"
+  throw (IO.userError s!"Error after {sleepDurationSeconds} seconds sleep call")
+
 public def blockAndPrint (action: EAsyncIO IO.Error Unit) : IO Unit := do
   let startTime ← AsyncEffect.IO.monotonicNow
   EAsyncIO.block action

@@ -135,6 +135,16 @@ public def concurrentlyAll (xs : Array (EAsyncIO ε α)) :  EAsyncIO ε (Array �
       arr.push value
     )) (pure #[])
 
+@[inline]
+public def throw (e : ε) : EAsyncIO ε α :=
+  AsyncIO.pure (.error e)
+
+@[inline]
+public def tryCatch (x : EAsyncIO ε α) (f : ε → EAsyncIO ε α) : EAsyncIO ε α :=
+  AsyncIO.bind x fun
+  | .ok a => EAsyncIO.pure a
+  | .error e => (f e)
+
 end EAsyncIO
 
 public instance instFunctorEAsyncIO : Functor (EAsyncIO ε) where
@@ -152,6 +162,10 @@ public instance instMonadLiftEIOEAsyncIO : MonadLift (EIO ε) (EAsyncIO ε) wher
 
 public instance instInhabitedEAsyncIO [Inhabited α] [Inhabited ε] : Inhabited (EAsyncIO ε α) where
   default := AsyncIO.pure default
+
+public instance instMonadExceptEAsyncIO : MonadExcept ε (EAsyncIO ε) where
+  throw := EAsyncIO.throw
+  tryCatch := EAsyncIO.tryCatch
 
 @[extern "async_effect_ffi_asyncio_from_sleep"]
 public opaque sleep (sleep : Sleep) : AsyncIO Unit

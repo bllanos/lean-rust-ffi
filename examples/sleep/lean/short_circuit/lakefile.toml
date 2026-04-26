@@ -1,0 +1,12 @@
+name = "short-circuit"
+versionTags = []
+licenseFiles = ["../../../../LICENSE-APACHE", "../../../../LICENSE-MIT"]
+
+[[lean_lib]]
+name = "ShortCircuit"
+buildType = "release"
+defaultFacets = ["static"]
+
+[[require]]
+name = "sleeper"
+path = "../sleeper"

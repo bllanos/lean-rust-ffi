@@ -1,0 +1,13 @@
+[package]
+name = "short-circuit-sys"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+lean-sys = { workspace = true }
+sleeper-sys = { workspace = true }
+
+[build-dependencies]
+anyhow = { workspace = true }
+examples-build-infrastructure = { workspace = true }

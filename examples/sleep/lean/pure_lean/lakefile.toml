@@ -14,3 +14,7 @@ root = "Concurrent"
 [[lean_exe]]
 name = "sequential"
 root = "Sequential"
+
+[[lean_exe]]
+name = "short_circuit"
+root = "ShortCircuit"

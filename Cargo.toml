@@ -10,6 +10,7 @@ members = [
   "examples/sleep/rust/concurrent_sys",
   "examples/sleep/rust/pure_rust",
   "examples/sleep/rust/sequential_sys",
+  "examples/sleep/rust/short_circuit_sys",
   "examples/sleep/rust/sleeper",
   "examples/sleep/rust/sleeper_sys",
   "examples_infrastructure/rust/build",
@@ -48,6 +49,7 @@ quote = "1.0.41"
 regex = "1.11.1"
 semver = "1.0.26"
 sequential-sys = { path = "examples/sleep/rust/sequential_sys" }
+short-circuit-sys = { path = "examples/sleep/rust/short_circuit_sys" }
 sleeper-lean = { path = "examples/sleep/rust/sleeper" }
 sleeper-sys = { path = "examples/sleep/rust/sleeper_sys" }
 syn = { version = "2.0.106", default-features = false }
