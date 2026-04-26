@@ -9,8 +9,8 @@ pub enum Error {
         "no default toolchain configured. run `elan default stable` to install and configure the latest Lean 4 stable release."
     )]
     NoDefaultToolchain,
-    #[error("no local Lean toolchains found")]
-    NoLocalToolchains,
+    #[error("no local Lean toolchains found for release '{release}'")]
+    NoLocalToolchains { release: String },
     #[error(transparent)]
     LocalToolchainDoesNotMatchRemote(#[from] Box<LocalToolchainDoesNotMatchRemote>),
     #[error("override toolchain '{toolchain}' is not installed: {reason_err}")]

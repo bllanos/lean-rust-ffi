@@ -187,7 +187,9 @@ pub fn resolve_toolchain_desc_ext(
                     .into())
                 }
             } else {
-                Err(Error::NoLocalToolchains)
+                Err(Error::NoLocalToolchains {
+                    release: release.to_owned(),
+                })
             }
         } else {
             Ok(unresolved_tc.0.clone())
