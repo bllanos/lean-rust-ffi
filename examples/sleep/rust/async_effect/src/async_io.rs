@@ -72,6 +72,29 @@ impl<T: Value> AsyncIo<T> {
         AsyncIo(Inner::concurrently(x.0, y.0))
     }
 
+    /// Create a [`AsyncIo`] that runs two instances concurrently until at least
+    /// one of them is finished
+    ///
+    /// # Efficiency
+    ///
+    /// Returning the instance that did not finish may seem like an innovative
+    /// way to prevent their computations from being lost (see Lean's [race
+    /// interface](https://github.com/leanprover/lean4/blob/a21d3b1ef77e0afcb619d4e245d55ba0a99d6d8a/src/Std/Async/Basic.lean#L525)).
+    /// Unfortunately, returning unfinished computations is inefficient
+    /// depending on the relative numbers of finished and unfinished
+    /// computations. Lean's [Selectable
+    /// interface](https://github.com/leanprover/lean4/blob/a21d3b1ef77e0afcb619d4e245d55ba0a99d6d8a/src/Std/Async/Select.lean#L18)
+    /// is a better solution in this respect. `Selectable` is more like
+    /// [epoll](https://en.wikipedia.org/wiki/Epoll), which addresses the [C10k
+    /// problem](https://en.wikipedia.org/wiki/C10k_problem).
+    ///
+    /// Lean's separation of
+    /// [async](https://github.com/leanprover/lean4/blob/a21d3b1ef77e0afcb619d4e245d55ba0a99d6d8a/src/Std/Async/Basic.lean#L79)
+    /// and
+    /// [await](https://github.com/leanprover/lean4/blob/a21d3b1ef77e0afcb619d4e245d55ba0a99d6d8a/src/Std/Async/Basic.lean#L70)
+    /// into distinct operations is another nice mechanism for running
+    /// operations concurrently without having to iterate over those that have
+    /// not yet finished.
     pub fn select<U: Value>(x: Self, y: AsyncIo<U>) -> AsyncIo<ConcurrentOrder<T, U>> {
         AsyncIo(
             Inner::select(x.0, y.0)
@@ -115,6 +138,12 @@ impl<T: Value> AsyncIo<T> {
         }
     }
 
+    /// Create a [`AsyncIo`] that runs other instances concurrently until at least
+    /// one of them is finished
+    ///
+    /// # Efficiency
+    ///
+    /// See notes on [`Self::select`]
     pub fn select_all<I: IntoIterator<Item = Self>>(
         collection: I,
     ) -> AsyncIo<Vec<MaybeAsyncIo<T>>> {
