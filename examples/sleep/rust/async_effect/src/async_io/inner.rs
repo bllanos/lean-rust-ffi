@@ -308,13 +308,10 @@ impl<T: Value> DeferredIo<T> {
                     Inner::select(first, Inner::Bind(effect.clone()))
                 }),
             }),
-            Inner::Pure(effect) => Inner::Io(DeferredIo {
-                io: self.io,
-                next: Arc::new(move |io_value| {
-                    let first = (self.next.clone())(io_value);
-                    Inner::select(first, Inner::Pure(effect.clone()))
-                }),
-            }),
+            Inner::Pure(effect) => Inner::Pure(Pure::new(ConcurrentOrderInner::Second(
+                Inner::Io(self),
+                effect.value,
+            ))),
         }
     }
 }
@@ -403,13 +400,10 @@ impl<T: Value> DeferredBind<T> {
                     }
                 }),
             }),
-            Inner::Pure(effect) => Inner::Bind(DeferredBind {
-                value: self.value,
-                next: Arc::new(move |value| {
-                    let first = (self.next.clone())(value);
-                    Inner::select(first, Inner::Pure(effect.clone()))
-                }),
-            }),
+            Inner::Pure(effect) => Inner::Pure(Pure::new(ConcurrentOrderInner::Second(
+                Inner::Bind(self),
+                effect.value,
+            ))),
         }
     }
 }
@@ -459,21 +453,9 @@ impl<T: Value> Pure<T> {
 
     fn select<U: Value>(self, y: Inner<U>) -> Inner<ConcurrentOrderInner<T, U>> {
         match y {
-            Inner::Effect(_) => Inner::Pure(Pure::new(ConcurrentOrderInner::First(self.value, y))),
-            Inner::Io(effect) => Inner::Io(DeferredIo {
-                io: effect.io,
-                next: Arc::new(move |io_value| {
-                    let second = (effect.next.clone())(io_value);
-                    Inner::select(Inner::Pure(self.clone()), second)
-                }),
-            }),
-            Inner::Bind(effect) => Inner::Bind(DeferredBind {
-                value: effect.value,
-                next: Arc::new(move |value| {
-                    let second = (effect.next.clone())(value);
-                    Inner::select(Inner::Pure(self.clone()), second)
-                }),
-            }),
+            Inner::Effect(_) | Inner::Io(_) | Inner::Bind(_) => {
+                Inner::Pure(Pure::new(ConcurrentOrderInner::First(self.value, y)))
+            }
             Inner::Pure(effect) => Inner::Pure(Pure::new(ConcurrentOrderInner::Both(
                 self.value,
                 effect.value,
