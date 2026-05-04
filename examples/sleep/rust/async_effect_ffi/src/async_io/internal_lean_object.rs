@@ -3,19 +3,19 @@ use lean_sys::{lean_obj_arg, lean_object};
 
 /// A Lean object that can be held by [`async_effect::async_io::AsyncIo`]
 ///
-/// This type assumes that it needs to be safely used from multiple Lean threads
-/// and therefore preemptively marks all internal Lean objects as
-/// multi-threaded. Consequently, it assumes that it will not be used as a
-/// persistent value by Lean code.
-///
-/// This type assumes the Lean runtime uses the object safely between threads.
-/// Therefore, it implements [`Send`] and [`Sync`].
+/// In order to implement [`Send`] and [`Sync`], which are required by
+/// [`async_effect::async_io::Value`], this type preemptively marks all internal
+/// Lean objects as multi-threaded. Consequently, it assumes that it will not be
+/// used as a persistent value by Lean code. It also assumes the Lean runtime
+/// uses the object safely between threads.
 ///
 /// Ideally, internal Lean objects would be marked as multi-threaded or
-/// persistent only on-demand, but [`async_effect::async_io::AsyncIo`] uses
-/// type-erased closures. The closures cannot provide access to any Lean objects
-/// they contain, so Lean objects must be marked as multi-threaded before being
-/// moved into the closures.
+/// persistent only on-demand, but this would not satisfy the contracts of
+/// [`Send`] and [`Sync`]. It would also require refactoring
+/// [`async_effect::async_io::AsyncIo`], which presently requires Lean objects
+/// to be stored inside type-erased Rust closures in some cases. Closures cannot
+/// provide access to any Lean objects they contain, so Lean objects must be
+/// marked as multi-threaded before being moved into the closures.
 pub struct InternalLeanObject(LeanAnyObject);
 
 impl InternalLeanObject {
