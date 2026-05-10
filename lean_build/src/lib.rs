@@ -28,7 +28,6 @@ fn write_warning_allow_directives<W: Write>(mut writer: W) -> std::io::Result<()
 #![allow(clippy::missing_safety_doc)]
 // These warnings will hopefully be resolved in a future ion of the
 // `bindgen` crate
-#![allow(unsafe_op_in_unsafe_fn)]
 #![allow(clippy::ptr_offset_with_cast)]
 #![allow(clippy::useless_transmute)]"
     )

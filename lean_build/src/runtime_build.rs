@@ -135,8 +135,6 @@ pub fn build<T: LakeEnvironmentDescriber>(
         .wrap_unsafe_ops(true)
         .wrap_static_fns(true)
         .wrap_static_fns_path(&inline_wrapper_functions_out_file)
-        // Block functions that produce compilation errors
-        .blocklist_function("lean_get_rc_mt_addr")
         .must_use_type("lean_obj_res")
         .must_use_type("b_lean_obj_res")
         .use_core()
@@ -180,6 +178,7 @@ pub use lean_sys::*;"
         .static_flag(true)
         .compiler(lake_environment.lean_clang_path())
         .archiver(lake_environment.lean_ar_path())
+        .flag_if_supported("-Wno-incompatible-pointer-types")
         .compile(output_files_config.inline_functions_library_base_name);
 
     let lean_sys_root_module_path = out_dir.join(output_files_config.lean_sys_root_module_filename);
