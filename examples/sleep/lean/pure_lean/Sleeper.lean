@@ -30,7 +30,10 @@ public def sleepAndPrintError (sleepDurationSeconds : Nat) : Async Unit := do
 
 public def blockAndPrint (action: Async Unit) : IO Unit := do
   let startTime ← IO.monoMsNow
-  Async.block action
+  try
+    Async.block action
+  catch e =>
+    IO.println s!"Caught error: {e}"
   let endTime ← IO.monoMsNow
   let (elapsedTimeSeconds, elapsedTimeRemainder) := formatElapsedTime startTime endTime
   IO.println s!"Total duration {elapsedTimeSeconds} seconds {elapsedTimeRemainder} milliseconds"

@@ -19,57 +19,33 @@ def main : IO Unit := do
   IO.println "\nPairs of actions:"
 
   IO.println "\nError first, shorter sleep first"
-
-  try
-    blockAndPrint (do
-      let _ ← (Async.concurrently action1Error action2)
-    )
-  catch e =>
-    IO.println e
+  blockAndPrint (do
+    let _ ← (Async.concurrently action1Error action2)
+  )
 
   IO.println "\nError first, shorter sleep second"
-
-  try
-    blockAndPrint (do
-      let _ ← (Async.concurrently action2Error action1)
-    )
-  catch e =>
-    IO.println e
+  blockAndPrint (do
+    let _ ← (Async.concurrently action2Error action1)
+  )
 
   IO.println "\nError second, shorter sleep first"
-
-  try
-    blockAndPrint (do
-      let _ ← (Async.concurrently action1 action2Error)
-    )
-  catch e =>
-    IO.println e
+  blockAndPrint (do
+    let _ ← (Async.concurrently action1 action2Error)
+  )
 
   IO.println "\nError second, shorter sleep second"
-
-  try
-    blockAndPrint (do
-      let _ ← (Async.concurrently action2 action1Error)
-    )
-  catch e =>
-    IO.println e
+  blockAndPrint (do
+    let _ ← (Async.concurrently action2 action1Error)
+  )
 
   IO.println "\nArrays of action with the error in the middle"
 
   IO.println "\nAscending sleep durations"
-
-  try
-    blockAndPrint (do
-      let _ ← (Async.concurrentlyAll #[action1, action2Error, action3])
-    )
-  catch e =>
-    IO.println e
+  blockAndPrint (do
+    let _ ← (Async.concurrentlyAll #[action1, action2Error, action3])
+  )
 
   IO.println "\nDescending sleep durations"
-
-  try
-    blockAndPrint (do
-      let _ ← (Async.concurrentlyAll #[action3, action2Error, action1])
-    )
-  catch e =>
-    IO.println e
+  blockAndPrint (do
+    let _ ← (Async.concurrentlyAll #[action3, action2Error, action1])
+  )

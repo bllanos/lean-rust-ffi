@@ -20,57 +20,33 @@ def shortCircuitMain : IO Unit := do
   AsyncEffect.IO.println "\nPairs of actions:"
 
   AsyncEffect.IO.println "\nError first, shorter sleep first"
-
-  try
-    blockAndPrint (do
-      let _ ← (EAsyncIO.concurrently action1Error action2)
-    )
-  catch e =>
-    AsyncEffect.IO.println e
+  blockAndPrint (do
+    let _ ← (EAsyncIO.concurrently action1Error action2)
+  )
 
   AsyncEffect.IO.println "\nError first, shorter sleep second"
-
-  try
-    blockAndPrint (do
-      let _ ← (EAsyncIO.concurrently action2Error action1)
-    )
-  catch e =>
-    AsyncEffect.IO.println e
+  blockAndPrint (do
+    let _ ← (EAsyncIO.concurrently action2Error action1)
+  )
 
   AsyncEffect.IO.println "\nError second, shorter sleep first"
-
-  try
-    blockAndPrint (do
-      let _ ← (EAsyncIO.concurrently action1 action2Error)
-    )
-  catch e =>
-    AsyncEffect.IO.println e
+  blockAndPrint (do
+    let _ ← (EAsyncIO.concurrently action1 action2Error)
+  )
 
   AsyncEffect.IO.println "\nError second, shorter sleep second"
-
-  try
-    blockAndPrint (do
-      let _ ← (EAsyncIO.concurrently action2 action1Error)
-    )
-  catch e =>
-    AsyncEffect.IO.println e
+  blockAndPrint (do
+    let _ ← (EAsyncIO.concurrently action2 action1Error)
+  )
 
   AsyncEffect.IO.println "\nArrays of action with the error in the middle"
 
   AsyncEffect.IO.println "\nAscending sleep durations"
-
-  try
-    blockAndPrint (do
-      let _ ← (EAsyncIO.concurrentlyAll #[action1, action2Error, action3])
-    )
-  catch e =>
-    AsyncEffect.IO.println e
+  blockAndPrint (do
+    let _ ← (EAsyncIO.concurrentlyAll #[action1, action2Error, action3])
+  )
 
   AsyncEffect.IO.println "\nDescending sleep durations"
-
-  try
-    blockAndPrint (do
-      let _ ← (EAsyncIO.concurrentlyAll #[action3, action2Error, action1])
-    )
-  catch e =>
-    AsyncEffect.IO.println e
+  blockAndPrint (do
+    let _ ← (EAsyncIO.concurrentlyAll #[action3, action2Error, action1])
+  )

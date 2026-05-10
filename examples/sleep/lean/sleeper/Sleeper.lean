@@ -29,7 +29,10 @@ public def sleepAndPrintError (sleepDurationSeconds : Nat) : EAsyncIO IO.Error U
 
 public def blockAndPrint (action: EAsyncIO IO.Error Unit) : IO Unit := do
   let startTime ← AsyncEffect.IO.monotonicNow
-  EAsyncIO.block action
+  try
+    EAsyncIO.block action
+  catch e =>
+    println s!"Caught error: {e}"
   let endTime ← AsyncEffect.IO.monotonicNow
   let (elapsedTimeSeconds, elapsedTimeRemainder) := formatElapsedTime startTime endTime
   println s!"Total duration {elapsedTimeSeconds} seconds {elapsedTimeRemainder} milliseconds"
