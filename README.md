@@ -249,7 +249,7 @@ The [`lean_build/src/elan_fork/`](lean_build/src/elan_fork) directory contains c
 
 2. Lake [Reverse FFI example](https://github.com/leanprover/lean4/tree/14ff08db6f651775ead432d367b6b083878bb0f9/tests/lake/examples/reverse-ffi)
 
-3. Lake [FFI example](https://github.com/leanprover/lean4/tree/14ff08db6f651775ead432d367b6b083878bb0f9/tests/lake/examples/ffi)
+3. Lake [FFI example](https://github.com/leanprover/lean4/tree/0eb80e34a660f54b88002b33c4d93965651c71cb/tests/lake/examples/ffi)
 
 4. Lean [Foreign type example](https://github.com/leanprover/lean4/blob/a166d6ee20ca87302e89b86f9e639889f633829e/tests/compiler/foreign/README.md)
 
@@ -262,6 +262,8 @@ The [`lean_build/src/elan_fork/`](lean_build/src/elan_fork) directory contains c
 8. [The Rustnomicon](https://doc.rust-lang.org/nomicon/index.html), in particular the [chapter on FFI](https://doc.rust-lang.org/nomicon/ffi.html)
 
 9. [Leo3: Rust Bindings for Lean4](https://github.com/AndPuQing/leo3)
+
+10. [lean4-rs](https://github.com/LemonHX/lean4-rs), which is likely stale, but which has a smaller volume of code so it is easier to review than [Leo3](https://github.com/AndPuQing/leo3).
 
 ## Contact
 
