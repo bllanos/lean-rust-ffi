@@ -5,6 +5,7 @@ licenseFiles = ["../../../../LICENSE-APACHE", "../../../../LICENSE-MIT"]
 
 [[lean_exe]]
 name = "main"
+buildType = "release"
 root = "Main"
 
 [[require]]

@@ -55,3 +55,8 @@ sleeper-sys = { path = "examples/sleep/rust/sleeper_sys" }
 syn = { version = "2.0.106", default-features = false }
 thiserror = "2.0.12"
 toml = "0.9.5"
+
+[profile.release]
+# Link Time Optimization helps remove dead code from executables.
+# See <https://github.com/johnthagen/min-sized-rust>
+lto = true

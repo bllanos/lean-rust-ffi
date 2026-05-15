@@ -9,12 +9,15 @@ defaultFacets = ["static"]
 
 [[lean_exe]]
 name = "concurrent"
+buildType = "release"
 root = "Concurrent"
 
 [[lean_exe]]
 name = "sequential"
+buildType = "release"
 root = "Sequential"
 
 [[lean_exe]]
 name = "short_circuit"
+buildType = "release"
 root = "ShortCircuit"
