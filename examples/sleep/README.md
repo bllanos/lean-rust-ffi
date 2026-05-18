@@ -3,6 +3,18 @@
 ## Table of contents <!-- omit from toc -->
 
 - [Overview](#overview)
+- [Demonstration](#demonstration)
+  - [Sequential](#sequential)
+    - [Pure Lean sequential example](#pure-lean-sequential-example)
+    - [Pure Rust sequential example](#pure-rust-sequential-example)
+    - [Combined Lean and Rust sequential example](#combined-lean-and-rust-sequential-example)
+  - [Concurrent](#concurrent)
+    - [Pure Lean concurrent example](#pure-lean-concurrent-example)
+    - [Pure Rust concurrent example](#pure-rust-concurrent-example)
+    - [Combined Lean and Rust concurrent example](#combined-lean-and-rust-concurrent-example)
+  - [Short circuit](#short-circuit)
+    - [Pure Lean short circuit example](#pure-lean-short-circuit-example)
+    - [Combined Lean and Rust short circuit example](#combined-lean-and-rust-short-circuit-example)
 - [Structure](#structure)
 - [Rust code design](#rust-code-design)
 - [Key features](#key-features)
@@ -20,6 +32,232 @@ This example demonstrates bidirectional FFI dependencies between Rust and Lean u
 3. Lazy evaluation
 4. Immutability
 5. Performance tradeoffs
+
+## Demonstration
+
+There are three programs demonstrating sleep operations. Each one is implemented more than one way for comparison purposes.
+
+### Sequential
+
+The `sequential` program sleeps for 1 second, then 2 seconds, and so forth until sleeping for 5 seconds. At the end of each sleep, it prints the number of seconds spent sleeping. Afterwards, it sleeps for 6 seconds, then 5 seconds, and so forth until sleeping for 1 second.
+
+The program output is as follows:
+
+```text
+Sequential sleep operations
+Called sleep for 0 seconds (actual sleep duration 0 seconds 1 milliseconds)
+Called sleep for 1 seconds (actual sleep duration 1 seconds 0 milliseconds)
+Called sleep for 2 seconds (actual sleep duration 2 seconds 1 milliseconds)
+Called sleep for 3 seconds (actual sleep duration 3 seconds 0 milliseconds)
+Called sleep for 4 seconds (actual sleep duration 4 seconds 0 milliseconds)
+Called sleep for 5 seconds (actual sleep duration 5 seconds 1 milliseconds)
+Called sleep for 6 seconds (actual sleep duration 6 seconds 0 milliseconds)
+Called sleep for 5 seconds (actual sleep duration 5 seconds 1 milliseconds)
+Called sleep for 4 seconds (actual sleep duration 4 seconds 0 milliseconds)
+Called sleep for 3 seconds (actual sleep duration 3 seconds 1 milliseconds)
+Called sleep for 2 seconds (actual sleep duration 2 seconds 0 milliseconds)
+Called sleep for 1 seconds (actual sleep duration 1 seconds 1 milliseconds)
+Total duration 36 seconds 6 milliseconds
+```
+
+#### Pure Lean sequential example
+
+Run the pure Lean version of the program using the following commands:
+
+```bash
+cd examples/sleep/lean/pure_lean
+lake exe sequential
+```
+
+#### Pure Rust sequential example
+
+Run the pure Rust version of the program using the following command:
+
+```bash
+cargo run -p sleeper-pure-rust --bin pure_rust_sequential
+```
+
+While the Rust program implements the same operations as the pure Lean program, Rust lacks [`do` notation](https://lean-lang.org/functional_programming_in_lean/Monads/do--Notation-for-Monads/#monad-do-notation). Therefore the Rust code is more verbose, with explicit anonymous function definitions in monadic bind operations.
+
+#### Combined Lean and Rust sequential example
+
+Run the program using the following command:
+
+```bash
+cargo run -p sleeper-lean --bin sequential
+```
+
+Sleep and I/O operations in this program are implemented in Rust and are used as external definitions in Lean. The Lean code in [`Sequential.lean`](lean/sequential/Sequential.lean) and [`Sleeper.lean`](lean/sleeper/Sleeper.lean) is similar to that in the pure Lean version, [`Sequential.lean`](lean/pure_lean/Sequential.lean) and [`Sleeper.lean`](lean/pure_lean/Sleeper.lean), differing only in naming and in time data formats for easier integration with Rust code. The Rust code and the Lean code that wraps it were designed to have similar interfaces to Lean's standard library.
+
+### Concurrent
+
+The `concurrent` program sleeps for 0, 1, 2, 3, 4, and 5 seconds concurrently, printing a line after each sleep. Therefore, it prints one line each second for 5 seconds.
+
+It then repeats the previous sequence of operations concurrently with two sequences of sleep operations: One that prints a line after 0, 1, 2, 3, 4, and 5 seconds, and another that prints a line after 6, 5, 4, 3, 2, and 1 seconds.
+
+The program output is as follows:
+
+```text
+Concurrent sleep operations
+Called sleep for 0 seconds (actual sleep duration 0 seconds 0 milliseconds)
+Called sleep for 1 seconds (actual sleep duration 1 seconds 1 milliseconds)
+Called sleep for 2 seconds (actual sleep duration 2 seconds 0 milliseconds)
+Called sleep for 3 seconds (actual sleep duration 3 seconds 0 milliseconds)
+Called sleep for 4 seconds (actual sleep duration 4 seconds 1 milliseconds)
+Called sleep for 5 seconds (actual sleep duration 5 seconds 0 milliseconds)
+Total duration 5 seconds 3 milliseconds
+Concurrent sleep operations concurrent with sequential sleep operations
+Called sleep for 0 seconds (actual sleep duration 0 seconds 0 milliseconds)
+Called sleep for 0 seconds (actual sleep duration 0 seconds 0 milliseconds)
+Called sleep for 1 seconds (actual sleep duration 1 seconds 1 milliseconds)
+Called sleep for 1 seconds (actual sleep duration 1 seconds 1 milliseconds)
+Called sleep for 2 seconds (actual sleep duration 2 seconds 0 milliseconds)
+Called sleep for 3 seconds (actual sleep duration 3 seconds 0 milliseconds)
+Called sleep for 2 seconds (actual sleep duration 2 seconds 0 milliseconds)
+Called sleep for 4 seconds (actual sleep duration 4 seconds 0 milliseconds)
+Called sleep for 5 seconds (actual sleep duration 5 seconds 0 milliseconds)
+Called sleep for 6 seconds (actual sleep duration 6 seconds 0 milliseconds)
+Called sleep for 3 seconds (actual sleep duration 3 seconds 2 milliseconds)
+Called sleep for 4 seconds (actual sleep duration 4 seconds 0 milliseconds)
+Called sleep for 5 seconds (actual sleep duration 5 seconds 0 milliseconds)
+Called sleep for 4 seconds (actual sleep duration 4 seconds 1 milliseconds)
+Called sleep for 5 seconds (actual sleep duration 5 seconds 2 milliseconds)
+Called sleep for 3 seconds (actual sleep duration 3 seconds 1 milliseconds)
+Called sleep for 2 seconds (actual sleep duration 2 seconds 1 milliseconds)
+Called sleep for 1 seconds (actual sleep duration 1 seconds 0 milliseconds)
+Total duration 21 seconds 3 milliseconds
+```
+
+The output of the second stage is explained in the table below. Each row in the table represents an elapsed time of one second. The cells in the first column count the cumulative elapsed time. The cells in the other columns contain the numbers of seconds printed by the corresponding group of sleep operations at the ends of the time periods corresponding to the rows in which the numbers appear.
+
+| Time (seconds) | Concurrent operations | Ascending sequence | Descending sequence |
+| -------------- | --------------------- | ------------------ | ------------------- |
+| 0              | 0                     | 0                  |                     |
+| 1              | 1                     | 1                  |                     |
+| 2              | 2                     |                    |                     |
+| 3              | 3                     | 2                  |                     |
+| 4              | 4                     |                    |                     |
+| 5              | 5                     |                    |                     |
+| 6              |                       | 3                  | 6                   |
+| 7              |                       |                    |                     |
+| 8              |                       |                    |                     |
+| 9              |                       |                    |                     |
+| 10             |                       | 4                  |                     |
+| 11             |                       |                    | 5                   |
+| 12             |                       |                    |                     |
+| 13             |                       |                    |                     |
+| 14             |                       |                    |                     |
+| 15             |                       | 5                  | 4                   |
+| 16             |                       |                    |                     |
+| 17             |                       |                    |                     |
+| 18             |                       |                    | 3                   |
+| 19             |                       |                    |                     |
+| 20             |                       |                    | 2                   |
+| 21             |                       |                    | 1                   |
+
+#### Pure Lean concurrent example
+
+Run the pure Lean version of the program using the following commands:
+
+```bash
+cd examples/sleep/lean/pure_lean
+lake exe concurrent
+```
+
+#### Pure Rust concurrent example
+
+Run the pure Rust version of the program using the following command:
+
+```bash
+cargo run -p sleeper-pure-rust --bin pure_rust_concurrent
+```
+
+#### Combined Lean and Rust concurrent example
+
+Run the program using the following command:
+
+```bash
+cargo run -p sleeper-lean --bin concurrent
+```
+
+There is also a version of the program that does not initialize the Lean runtime (see [below](#pruning-the-lean-runtime)), and can be run using the following command:
+
+```bash
+cargo run -p sleeper-lean --bin concurrent_no_runtime
+```
+
+### Short circuit
+
+The `short_circuit` example demonstrates how errors can interrupt asynchronous operations before they finish.
+
+Its output is as follows:
+
+```text
+Short-circuiting sleep operations on errors
+
+Pairs of actions:
+
+Error first, shorter sleep first
+Called sleep for 1 seconds (actual sleep duration 1 seconds 0 milliseconds)
+Raising error after 1 seconds sleep call
+Caught error: Error after 1 seconds sleep call
+Total duration 1 seconds 0 milliseconds
+
+Error first, shorter sleep second
+Called sleep for 1 seconds (actual sleep duration 1 seconds 0 milliseconds)
+Called sleep for 2 seconds (actual sleep duration 2 seconds 0 milliseconds)
+Raising error after 2 seconds sleep call
+Caught error: Error after 2 seconds sleep call
+Total duration 2 seconds 0 milliseconds
+
+Error second, shorter sleep first
+Called sleep for 1 seconds (actual sleep duration 1 seconds 0 milliseconds)
+Called sleep for 2 seconds (actual sleep duration 2 seconds 0 milliseconds)
+Raising error after 2 seconds sleep call
+Caught error: Error after 2 seconds sleep call
+Total duration 2 seconds 0 milliseconds
+
+Error second, shorter sleep second
+Called sleep for 1 seconds (actual sleep duration 1 seconds 0 milliseconds)
+Raising error after 1 seconds sleep call
+Caught error: Error after 1 seconds sleep call
+Total duration 1 seconds 0 milliseconds
+
+Arrays of action with the error in the middle
+
+Ascending sleep durations
+Called sleep for 1 seconds (actual sleep duration 1 seconds 0 milliseconds)
+Called sleep for 2 seconds (actual sleep duration 2 seconds 0 milliseconds)
+Raising error after 2 seconds sleep call
+Caught error: Error after 2 seconds sleep call
+Total duration 2 seconds 1 milliseconds
+
+Descending sleep durations
+Called sleep for 1 seconds (actual sleep duration 1 seconds 0 milliseconds)
+Called sleep for 2 seconds (actual sleep duration 2 seconds 0 milliseconds)
+Raising error after 2 seconds sleep call
+Caught error: Error after 2 seconds sleep call
+Total duration 2 seconds 1 milliseconds
+```
+
+See [below](#error-handling) for information about how short-circuiting is implemented.
+
+#### Pure Lean short circuit example
+
+Run the pure Lean version of the program using the following commands:
+
+```bash
+cd examples/sleep/lean/pure_lean
+lake exe short_circuit
+```
+
+#### Combined Lean and Rust short circuit example
+
+Run the program using the following command:
+
+```bash
+cargo run -p sleeper-lean --bin short_circuit
+```
 
 ## Structure
 
