@@ -23,7 +23,13 @@ This example demonstrates bidirectional FFI dependencies between Rust and Lean u
 
 ## Structure
 
-The code in this directory is organized into libraries and executables and shown in the diagram below:
+The code in this directory is organized into libraries and executables and shown in the diagram below. We demonstrate:
+
+1. Lean code that depends on Lean code
+2. Lean code that depends on Rust code
+3. Rust code that depends on Lean code
+4. Rust code that depends on Rust code
+5. Longer dependency chains between the two languages showing that the approach can accommodate mixed-language transitive dependency relationships
 
 ```mermaid
 ---
@@ -97,10 +103,12 @@ flowchart TD
 Dependency relationships are structured as follows:
 
 1. Every Lean library has an associated `-sys` Rust library that builds and links it into Rust executables.
-2. Rust `-sys` libraries that wrap Lean libraries declare dependencies on Rust libraries that mirror the dependencies between Lean libraries.
+2. Rust `-sys` libraries that wrap Lean libraries declare dependencies on Rust libraries that mirror the dependencies between Lean libraries. `extern crate` directives in Rust code are needed to force the dependencies to be linked as there are no explicit Rust code dependencies between the crates ([example](rust/concurrent_sys/src/lib.rs)).
 3. To build executables from Lean code that depends on Rust code, there are Rust executables that call entrypoint functions (e.g. [`concurrent_main()`](lean/concurrent/Concurrent.lean)) defined in Lean libraries.
 
-Each programming language is responsible for compiling its own code, but Rust tooling is used to orchestrate compilation commands for both languages and to link libraries together into executables.
+Each programming language is responsible for compiling its own code, but Rust tooling is used to orchestrate compilation commands for both languages and to link libraries together into executables. Giving one linker toolchain control over all link operations makes it easier to manage link-time dependencies in a systematic way and prevent link-time errors. The cost of this strategy is some added boilerplate code to wrap foreign libraries, as shown in the diagram above. We made Rust's build tools responsible linking because they are more mature and have a larger ecosystem than Lean's build tools. Note that this means there is no need for the `crate-type` attribute specifying what kind of build artifact to generate from Rust code as Rust build artifacts never need to be used by Lean's build tools.
+
+For more information on build artifacts and linking, see <https://doc.rust-lang.org/reference/linkage.html>.
 
 ## Rust code design
 

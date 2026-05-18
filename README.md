@@ -12,6 +12,7 @@ This repository contains Rust [crates](https://doc.rust-lang.org/book/ch07-01-pa
     - [C](#c)
     - [Unsafe Rust](#unsafe-rust)
     - [Safe Rust](#safe-rust)
+  - [Using Rust from Lean](#using-rust-from-lean)
 - [FAQ](#faq)
   - [Why use Lean?](#why-use-lean)
   - [Why use Rust?](#why-use-rust)
@@ -199,6 +200,10 @@ This high-level program depends on the following additional Rust crates:
 1. [`lean`](lean) provides higher-level abstractions on top of [`lean-sys`](lean_sys).
 
 2. [`map-array`](examples/map_array/rust/map_array) provides higher-level abstractions on top of [`map-array-sys`](examples/map_array/rust/map_array_sys).
+
+### Using Rust from Lean
+
+The [`examples/sleep/`](examples/sleep) directory contains a more advanced demonstration of using the two languages in the same program and compares and contrasts code written in each language. See [`examples/sleep/README.md`](examples/sleep/README.md).
 
 ## FAQ
 
