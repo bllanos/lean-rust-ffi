@@ -3,6 +3,7 @@
 ## Table of contents <!-- omit from toc -->
 
 - [Overview](#overview)
+- [Structure](#structure)
 - [Rust code design](#rust-code-design)
 - [Key features](#key-features)
   - [Destructive updates](#destructive-updates)
@@ -19,6 +20,87 @@ This example demonstrates bidirectional FFI dependencies between Rust and Lean u
 3. Lazy evaluation
 4. Immutability
 5. Performance tradeoffs
+
+## Structure
+
+The code in this directory is organized into libraries and executables and shown in the diagram below:
+
+```mermaid
+---
+title: Sleep example library and executable dependency diagram
+---
+flowchart TD
+   async-effect-ffi([async-effect-ffi Rust library])
+   async-effect-lean((async-effect Lean library))
+   async-effect-rust([async-effect Rust library])
+   async-effect-sys([async-effect-sys Rust library])
+   concurrent-sys([concurrent-sys Rust library])
+   concurrent((Concurrent Lean library with example entrypoint function))
+   sequential-sys([sequential-sys Rust library])
+   sequential((Sequential Lean library with example entrypoint function))
+   short_circuit((ShortCircuit Lean library with example entrypoint function))
+   short-circuit-sys([short-circuit-sys Rust library])
+   sleeper-sys([sleeper-sys Rust library])
+   sleeper((sleeper Lean library))
+
+   async-effect-ffi -->|Rust dependency| async-effect-rust
+   async-effect-lean -->|Link time FFI dependency| async-effect-ffi
+   async-effect-sys -->|FFI dependency| async-effect-lean
+   async-effect-sys -->|Rust dependency| async-effect-ffi
+   concurrent -->|Lean dependency| sleeper
+   concurrent-sys -->|FFI dependency| concurrent
+   concurrent-sys -->|Rust dependency| sleeper-sys
+   sequential -->|Lean dependency| sleeper
+   sequential-sys -->|FFI dependency| sequential
+   sequential-sys -->|Rust dependency| sleeper-sys
+   short_circuit -->|Lean dependency| sleeper
+   short-circuit-sys -->|FFI dependency| short_circuit
+   short-circuit-sys -->|Rust dependency| sleeper-sys
+   sleeper -->|Lean dependency| async-effect-lean
+   sleeper_pure_rust -->|Rust dependency| async-effect-rust
+   sleeper-sys -->|FFI dependency| sleeper
+   sleeper-sys -->|Rust dependency| async-effect-sys
+
+   subgraph sleeper-pure-rust [Pure Rust crate]
+    concurrent_pure_rust[concurrent Rust executable]
+    sequential_pure_rust[sequential Rust executable]
+    sleeper_pure_rust([sleeper Rust library])
+
+    concurrent_pure_rust -->|Rust dependency| sleeper_pure_rust
+    sequential_pure_rust -->|Rust dependency| sleeper_pure_rust
+   end
+
+   subgraph sleeper-lean [Rust crate combining both languages]
+    concurrent_no_runtime_rust[concurrent_no_runtime Rust executable wrapping Lean]
+    concurrent_rust[concurrent Rust executable wrapping Lean]
+    sequential_rust[sequential Rust executable wrapping Lean]
+    short_circuit_rust[short_circuit Rust executable wrapping Lean]
+   end
+
+   concurrent_no_runtime_rust -->|Rust dependency| concurrent-sys
+   concurrent_rust -->|Rust dependency| concurrent-sys
+   sequential_rust -->|Rust dependency| sequential-sys
+   short_circuit_rust -->|Rust dependency| short-circuit-sys
+
+   subgraph pure_lean [Pure Lean package]
+    concurrent_pure_lean[\concurrent Lean executable\]
+    sequential_pure_lean[\sequential Lean executable\]
+    short_circuit_pure_lean[\short_circuit Lean executable\]
+    sleeper_pure_lean((sleeper Lean library))
+
+    concurrent_pure_lean -->|Lean dependency| sleeper_pure_lean
+    sequential_pure_lean -->|Lean dependency| sleeper_pure_lean
+    short_circuit_pure_lean -->|Lean dependency| sleeper_pure_lean
+   end
+```
+
+Dependency relationships are structured as follows:
+
+1. Every Lean library has an associated `-sys` Rust library that builds and links it into Rust executables.
+2. Rust `-sys` libraries that wrap Lean libraries declare dependencies on Rust libraries that mirror the dependencies between Lean libraries.
+3. To build executables from Lean code that depends on Rust code, there are Rust executables that call entrypoint functions (e.g. [`concurrent_main()`](lean/concurrent/Concurrent.lean)) defined in Lean libraries.
+
+Each programming language is responsible for compiling its own code, but Rust tooling is used to orchestrate compilation commands for both languages and to link libraries together into executables.
 
 ## Rust code design
 
