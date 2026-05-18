@@ -16,11 +16,13 @@
     - [Pure Lean short circuit example](#pure-lean-short-circuit-example)
     - [Combined Lean and Rust short circuit example](#combined-lean-and-rust-short-circuit-example)
 - [Structure](#structure)
+  - [Static versus dynamic linking](#static-versus-dynamic-linking)
 - [Rust code design](#rust-code-design)
 - [Key features](#key-features)
   - [Destructive updates](#destructive-updates)
   - [Error handling](#error-handling)
   - [Pruning the Lean runtime](#pruning-the-lean-runtime)
+  - [Encapsulating Rust FFI code](#encapsulating-rust-ffi-code)
 - [References](#references)
 
 ## Overview
@@ -348,6 +350,17 @@ Each programming language is responsible for compiling its own code, but Rust to
 
 For more information on build artifacts and linking, see <https://doc.rust-lang.org/reference/linkage.html>.
 
+### Static versus dynamic linking
+
+Following the [arguments expressed in `min-sized-rust`](https://github.com/johnthagen/min-sized-rust#dynamic-linking-why-it-doesnt-work), we use static linking to create executables that only depend on shared (i.e. dynamically-linked) libraries that are already pre-installed on most platforms (e.g. `libm`).
+
+If we wanted to support running Lean code that depends on Rust in Lean's interpreter, it would be necessary to create shared libraries (either instead of, or in addition to, static libraries) and use them with the Lean interpreter's [`--load-dynlib`](https://lean-lang.org/doc/reference/latest/Run-Time-Code/Foreign-Function-Interface/#The-Lean-Language-Reference--Run-Time-Code--Foreign-Function-Interface--____LSQ_extern_RSQ_--in-the-Interpreter) argument.
+
+Running foreign code in the Lean interpreter is seldom needed, however. Consider that:
+
+1. Any undefined behavior in foreign code would affect the Lean interpreter internally and could lead to unexpected results.
+2. Foreign code is especially useful for implementing side effects, but using [#eval](https://lean-lang.org/doc/reference/latest/Interacting-with-Lean/#Lean___Parser___Command___eval) to evaluate code with side-effects is unusual. Side effects would occur while viewing code in an editor that automatically runs `#eval` commands. It is dangerous if viewing code may modify one's system.
+
 ## Rust code design
 
 This example does _not_ demonstrate how to do the following:
@@ -430,6 +443,16 @@ ls -lh target/release/concurrent
 time target/release/concurrent
 strace -cf target/release/concurrent
 ```
+
+### Encapsulating Rust FFI code
+
+One design choice shown in the [structure diagram above](#structure) is the separation of Rust code that Lean depends on for asynchronous operations into two Rust crates, [`async-effect`](rust/async_effect), and [`async-effect-ffi`](rust/async_effect_ffi). `async-effect` contains all logical functionality for asynchronous operations, whereas `async-effect-ffi` wraps `async-effect` in the C language interfaces used by Lean's FFI functionality. Other Rust code can depend on `async-effect` without acquiring an unnecessary dependency on the Lean FFI-related code.
+
+An alternative would be to make FFI-related code a [Cargo feature](https://doc.rust-lang.org/cargo/reference/features.html) of the `async-effect` crate, but this is undesirable for several reasons:
+
+1. Whenever FFI-related code changes, the release version of `async-effect` would also need to change, even though the changes are irrelevant to pure Rust dependents.
+2. Features make builds less predictable by increasing the number of build variants, and can make bugs more difficult to discover. See <https://doc.rust-lang.org/cargo/reference/features.html#feature-combinations>.
+3. FFI code may need to be packaged into different build artifacts, such as static or dynamic system libraries. The Cargo manifest field for this purpose, [`crate-type`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-crate-type-field), is unrelated to Cargo features. Moreover, it can produce [conflicting build artifacts](https://github.com/rust-lang/cargo/issues/6313) and therefore should be isolated in a dedicated crate in order to limit its potential impact. Arguably, for flexibility, there should be a dependency chain of length three: Reusable Rust code in one crate, FFI code in a second crate, and `crate-type` settings in additional crate(s).
 
 ## References
 
