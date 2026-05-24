@@ -3,6 +3,8 @@ include!(env!("LEAN_RUST_BINDINGS"));
 pub const ELAN_TOOLCHAIN: &str = env!("ELAN_TOOLCHAIN");
 pub const LEAN_GITHASH: &str = env!("LEAN_GITHASH");
 
+// Declare functions that are not declared in Lean's public header files but are
+// exported by Lean's libraries.
 unsafe extern "C" {
     pub unsafe fn lean_setup_args(
         argc: core::ffi::c_int,

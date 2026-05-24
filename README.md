@@ -4,6 +4,7 @@ This repository contains Rust [crates](https://doc.rust-lang.org/book/ch07-01-pa
 
 ## Table of contents <!-- omit from toc -->
 
+- [How to use](#how-to-use)
 - [Setup](#setup)
   - [Other useful tools](#other-useful-tools)
 - [Examples](#examples)
@@ -23,6 +24,16 @@ This repository contains Rust [crates](https://doc.rust-lang.org/book/ch07-01-pa
 - [Contact](#contact)
 - [License](#license)
 
+## How to use
+
+Use this project as a source of ideas. It should not be used as a dependency, but as reference material. Lean's Foreign Function Interface has an [explicit warning](https://lean-lang.org/doc/reference/latest/Run-Time-Code/Foreign-Function-Interface/#ffi):
+
+> The current interface was designed for internal use in Lean and should be considered unstable.
+
+This project is an exploration of Lean's Foreign Function Interface as it evolves over time. We do not plan to provide stability by publishing releases that are tied to specific versions of Lean. There are [other projects](#references) that may be suitable as stable dependencies.
+
+See [`lean_build/README.md`](lean_build/README.md) for additional notes on stability.
+
 ## Setup
 
 1. Install Rust: <https://rust-lang.org/tools/install/>
@@ -30,8 +41,8 @@ This repository contains Rust [crates](https://doc.rust-lang.org/book/ch07-01-pa
    This project does not have a well-known set of compatible Rust versions. At the time of writing, the Rust version used was:
 
    ```text
-   cargo 1.93.1 (083ac5135 2025-12-15)
-   rustc and rust-std 1.93.1 (01f6ddf75 2026-02-11)
+   cargo 1.95.0 (f2d3ce0bd 2026-03-21)
+   rustc and rust-std 1.95.0 (59807616e 2026-04-14)
    ```
 
 2. Install Lean: <https://lean-lang.org/install/manual/>
@@ -41,9 +52,11 @@ This repository contains Rust [crates](https://doc.rust-lang.org/book/ch07-01-pa
    This project does not have a well-known set of compatible Lean versions. At the time of writing, the Lean version used was:
 
    ```text
-   leanprover/lean4:v4.28.0
-   Lean (version 4.28.0, x86_64-unknown-linux-gnu, commit 7e01a1bf5c70fc6167d49c345d3bf80596e9a79b, Release)
+   leanprover/lean4:v4.29.1
+   Lean (version 4.29.1, x86_64-unknown-linux-gnu, commit f72c35b3f637c8c6571d353742168ab66cc22c00, Release)
    ```
+
+   The code in this project determines which Lean version to use the same way as ordinary Lean projects: We use [Lake](https://github.com/leanprover/lean4/tree/07dd2c9bf4d711a56791de8177eed41170860ef4/src/lake) to build Lean code, and also include some code from [Elan](https://github.com/leanprover/elan) as explained in [`lean_build/src/elan_fork/README.md`](lean_build/src/elan_fork/README.md). For example, as in a pure Lean project, setting the [`ELAN_TOOLCHAIN` environment variable](https://github.com/leanprover/lean4/blob/07dd2c9bf4d711a56791de8177eed41170860ef4/src/lake/Lake/Config/Env.lean#L82) will override the Lean toolchain version.
 
 3. Install system dependencies of `bindgen`: <https://rust-lang.github.io/rust-bindgen/requirements.html>
 
@@ -217,7 +230,7 @@ Rust is a systems programming language with a large ecosystem of tooling and lib
 
 ### Why not use Rust from Lean?
 
-The code in this repository might assist with developing Lean libraries that depend on Rust libraries, although at the time of writing this idea has not been tested. This project assumes that Lean and Rust libraries will be linked together using Rust's build tools and that the `main()` functions of programs will be written in Rust. It is not designed as a framework for writing Lean programs that depend on Rust libraries, but for writing Rust programs that depend on Lean libraries which may, in turn, depend on Rust libraries.
+The code in this repository assists with developing Lean libraries that depend on Rust libraries, as mentioned [above](#using-rust-from-lean). This project assumes that Lean and Rust libraries will be linked together using Rust's build tools and that the `main()` functions of programs will be written in Rust. It is not designed as a framework for writing Lean programs that depend on Rust libraries, but for writing Rust programs that depend on Lean libraries which may, in turn, depend on Rust libraries.
 
 Writing Lean libraries that depend on Rust code is undesirable from two perspectives:
 
