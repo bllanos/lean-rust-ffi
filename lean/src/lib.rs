@@ -144,7 +144,7 @@ pub unsafe trait Modules {
     /// [`RuntimeComponents`].
     ///
     /// The signature of this function is that of a Lean module initializer. See
-    /// <https://github.com/leanprover/lean4/blob/master/doc/dev/ffi.md#initialization>.
+    /// <https://lean-lang.org/doc/reference/latest/Run-Time-Code/Foreign-Function-Interface/#ffi-initialization>.
     ///
     /// # Safety
     ///

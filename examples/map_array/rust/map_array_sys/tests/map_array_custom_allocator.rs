@@ -47,7 +47,7 @@ fn map_array_custom_allocator() -> anyhow::Result<()> {
     // --------------------------
     let res: *mut lean_object;
     // Use same default as for Lean executables
-    // See https://github.com/leanprover/lean4/blob/master/doc/dev/ffi.md#initialization
+    // See https://lean-lang.org/doc/reference/latest/Run-Time-Code/Foreign-Function-Interface/#ffi-initialization
     let builtin: u8 = 1;
 
     unsafe {

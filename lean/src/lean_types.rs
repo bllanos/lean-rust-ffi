@@ -32,7 +32,7 @@ pub unsafe trait Reference {
 ///
 ///
 /// See [Lean's FFI
-/// documentation](https://github.com/leanprover/lean4/blob/master/doc/dev/ffi.md#borrowing)
+/// documentation](https://lean-lang.org/doc/reference/latest/Run-Time-Code/Foreign-Function-Interface/#ffi-borrowing)
 /// for more information.
 ///
 /// # Safety
@@ -57,7 +57,7 @@ pub unsafe trait Borrower: Reference + ToOwned {
 /// to must be decremented.
 ///
 /// See [Lean's FFI
-/// documentation](https://github.com/leanprover/lean4/blob/master/doc/dev/ffi.md#borrowing)
+/// documentation](https://lean-lang.org/doc/reference/latest/Run-Time-Code/Foreign-Function-Interface/#ffi-borrowing)
 /// for more information.
 ///
 /// # Safety

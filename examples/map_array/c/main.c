@@ -26,7 +26,7 @@ int main(int argc, char ** argv) {
   // --------------------------
   lean_object* res;
   // Use same default as for Lean executables
-  // See https://github.com/leanprover/lean4/blob/master/doc/dev/ffi.md#initialization
+  // See https://lean-lang.org/doc/reference/latest/Run-Time-Code/Foreign-Function-Interface/#ffi-initialization
   uint8_t builtin = 1;
   res = initialize_map_x2darray_MapArray(builtin);
   if (lean_io_result_is_ok(res)) {

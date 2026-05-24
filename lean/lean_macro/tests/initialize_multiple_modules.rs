@@ -36,7 +36,7 @@ combine_lean_module_initializers! {
 
 fn assert_initializes_both_modules<T: OneModule + TwoModule>() {
     // Use same default as for Lean executables
-    // See <https://github.com/leanprover/lean4/blob/master/doc/dev/ffi.md#initialization>
+    // See <https://lean-lang.org/doc/reference/latest/Run-Time-Code/Foreign-Function-Interface/#ffi-initialization>
     let builtin: u8 = 1;
 
     unsafe {

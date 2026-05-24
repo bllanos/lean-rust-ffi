@@ -32,7 +32,7 @@ impl<C: RuntimeComponents, M: Modules> RuntimeImpl<C, M> {
     unsafe fn initialize_modules() -> Result<(), lean_obj_res> {
         let res: *mut lean_object;
         // Use same default as for Lean executables
-        // See <https://github.com/leanprover/lean4/blob/master/doc/dev/ffi.md#initialization>
+        // See <https://lean-lang.org/doc/reference/latest/Run-Time-Code/Foreign-Function-Interface/#ffi-initialization>
         let builtin: u8 = 1;
 
         unsafe {
