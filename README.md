@@ -34,6 +34,9 @@ This project is an exploration of Lean's Foreign Function Interface as it evolve
 
 See [`lean_build/README.md`](lean_build/README.md) for additional notes on stability.
 
+> [!NOTE]
+> This project was developed on Linux. Both Lean and Rust support multiple platforms, but there is no guarantee that this project works as expected on other platforms.
+
 ## Setup
 
 1. Install Rust: <https://rust-lang.org/tools/install/>
@@ -95,17 +98,17 @@ Output array: #[6, 21, 36, 51, 66, 81]
 Program end
 ```
 
-The program creates an array of `6` numbers and passes it to the `map` function from the [Lean `MapArray` library](examples/map_array/lean/map_array/MapArray/Basic.lean). `map` requires an options argument, of type `MapOptions`, that contains an addend and a multiplicand. `map` produces an array where each number has been summed with the addend and then multiplied by the multiplicand.
+The program creates an array of six numbers and passes it to the `map` function from the [Lean `MapArray` library](examples/map_array/lean/map_array/MapArray/Basic.lean). `map` requires an options argument, of type `MapOptions`, that contains an addend and a multiplicand. `map` produces an array where each number has been summed with the addend and then multiplied by the multiplicand.
 
 #### C
 
-Lean 4 compiles code by generating C code and then compiling the C code with a C compiler. As such, Lean libraries can be used directly by C programs, as explained in Lean's [Foreign Function Interface documentation](https://github.com/leanprover/lean4/blob/master/doc/dev/ffi.md).
+Lean 4 compiles code by generating C code and then compiling the C code with a C compiler. As such, Lean libraries can be used directly by C programs, as explained in Lean's [Foreign Function Interface documentation](https://lean-lang.org/doc/reference/latest/Run-Time-Code/Foreign-Function-Interface/#ffi).
 
 Our first step in using Lean libraries from Rust is to learn how to use them from C.
 
 We created a C program with the same functionality as the [Lean program](#lean) in [`examples/map_array/c/main.c`](examples/map_array/c/main.c).
 
-To run the Lean program, run the following commands.
+To run the C program, run the following commands:
 
 ```bash
 cd examples/map_array/c
@@ -114,7 +117,7 @@ cd examples/map_array/c
 ```
 
 > [!NOTE]
-> The scripts used to build and run the program were developed on Linux. The scripts may not work in other environments. In contrast, there are no shell scripts for running the Lean and Rust sample programs. It may be possible to run these sample programs in other environments that Lean and Rust support.
+> The scripts used to build and run the program were developed on Linux. The scripts may not work in other environments.
 
 The script output should look similar to the following:
 
@@ -155,13 +158,13 @@ Rust programmers usually integrate code from other languages in two steps:
 
 [`examples/map_array/rust/map_array_bin/src/bin/low_level.rs`](examples/map_array/rust/map_array_bin/src/bin/low_level.rs) is a Rust program that uses our `*-sys` crates for the Lean runtime and for the [Lean `MapArray` library](examples/map_array/lean/map_array/MapArray/Basic.lean). It replicates the [C program](#c) and therefore looks very similar. The `unsafe` keyword appears throughout.
 
-To run `low_level.rs`, run the following commands:
+To run `low_level.rs`, run the following command:
 
 ```bash
 cargo run -p map-array-bin --bin low_level
 ```
 
-The commands should output build output from [Cargo](https://doc.rust-lang.org/cargo/index.html), followed by output from the program itself:
+The command will output build output from [Cargo](https://doc.rust-lang.org/cargo/index.html), followed by output from the program itself:
 
 ```text
 Program start
@@ -179,7 +182,7 @@ This low-level program depends on the following Rust crates from this project:
    `lean-build` helps with:
    1. Finding and linking to Lean library files for the Lean runtime and for custom Lean libraries.
    2. Defining Rust equivalents of the types and functions in the C code output by Lean's compiler. We do so using [`bindgen`](https://rust-lang.github.io/rust-bindgen/).
-   3. Ensuring that Cargo automatically rebuilds Lean and Rust code whenever there the Lean toolchain version Lean code change.
+   3. Ensuring that Cargo automatically rebuilds Lean and Rust code whenever the Lean toolchain version changes or custom Lean code changes.
 
 2. [`lean-sys`](lean_sys) is a low-level crate that links to the Lean runtime using `lean-build`.
 
@@ -189,15 +192,15 @@ This low-level program depends on the following Rust crates from this project:
 
 [`examples/map_array/rust/map_array_bin/src/bin/high_level.rs`](examples/map_array/rust/map_array_bin/src/bin/high_level.rs) is a Rust program that uses a high-level Rust interface for the [Lean `MapArray` library](examples/map_array/lean/map_array/MapArray/Basic.lean). It is intended to resemble the original [Lean program](#lean), while following Rust style conventions.
 
-`high_level.rs` does not contain the `unsafe` keyword. To emphasize this point, it begins with `#![forbid(unsafe_code)]`, which causes the Rust compiler to raise an error when it encounters `unsafe` code.
+`high_level.rs` does not contain the `unsafe` keyword. To emphasize this point, it begins with `#![forbid(unsafe_code)]`, which would cause the Rust compiler to raise an error if it encountered `unsafe` code.
 
-To run `high_level.rs`, run the following commands:
+To run `high_level.rs`, run the following command:
 
 ```bash
 cargo run -p map-array-bin --bin high_level
 ```
 
-The output from the commands should resemble the following:
+The output from the command should resemble the following:
 
 ```text
 Program start
@@ -216,7 +219,7 @@ This high-level program depends on the following additional Rust crates:
 
 ### Using Rust from Lean
 
-The [`examples/sleep/`](examples/sleep) directory contains a more advanced demonstration of using the two languages in the same program and compares and contrasts code written in each language. See [`examples/sleep/README.md`](examples/sleep/README.md).
+The [`examples/sleep/`](examples/sleep) directory contains a more advanced demonstration of using the two languages in the same program, including both dependencies of Rust code on Lean code and of Lean code on Rust code. See [`examples/sleep/README.md`](examples/sleep/README.md).
 
 ## FAQ
 
@@ -230,7 +233,7 @@ Rust is a systems programming language with a large ecosystem of tooling and lib
 
 ### Why not use Rust from Lean?
 
-The code in this repository assists with developing Lean libraries that depend on Rust libraries, as mentioned [above](#using-rust-from-lean). This project assumes that Lean and Rust libraries will be linked together using Rust's build tools and that the `main()` functions of programs will be written in Rust. It is not designed as a framework for writing Lean programs that depend on Rust libraries, but for writing Rust programs that depend on Lean libraries which may, in turn, depend on Rust libraries.
+The code in this repository assists with developing Lean libraries that depend on Rust libraries, as mentioned [above](#using-rust-from-lean), but it favours dependencies in the other direction, from Rust to Lean. This preference is reflected in the way the build is structured: Lean and Rust libraries are linked together using Rust's build tools, and the `main()` functions of programs are written in Rust. It is not designed as a framework for writing Lean programs that depend on Rust libraries, but for writing Rust programs that depend on Lean libraries which may, in turn, depend on Rust libraries.
 
 Writing Lean libraries that depend on Rust code is undesirable from two perspectives:
 
@@ -242,9 +245,9 @@ Writing Lean libraries that depend on Rust code is undesirable from two perspect
 
 A program written in a functional programming language combines a pure functional core with a surrounding runtime that executes side effects (see [_Functional Programming in Lean_](https://lean-lang.org/functional_programming_in_lean/Hello___-World___/Running-a-Program)). Working on both the runtime (in a systems programming language such as Rust) and pure functional core of a program (in a pure functional language such as Lean) leads to better results than working only within the core, for the following reasons:
 
-1. The runtime has some built-in overhead because it needs to run arbitrary programs. This is a "curse of generality". A runtime that can make assumptions about the program it is running can work more efficiently.
+1. The default runtime of a functional programming language has some built-in overhead because it needs to run arbitrary programs. This is a "curse of generality". A runtime that can make assumptions about the program it is running can work more efficiently.
 
-   For example, when the core opens a file, the runtime must keep track of references to the file to [avoid closing the file until after all references expire](https://lean-lang.org/functional_programming_in_lean/Hello___-World___/Worked-Example___--cat). If the runtime instead knew which file to open, invoked a function from the core on data from the file (not on the file itself), and closed the file immediately afterwards, it would not need file handle reference tracking.
+   For example, when the core opens a file, the runtime must keep track of references to the file to [avoid closing the file until after all references expire](https://lean-lang.org/functional_programming_in_lean/Hello___-World___/Worked-Example___--cat). If the runtime instead knew which file to open, invoked a function from the core on data from the file (not on the file itself), and closed the file immediately afterwards, then the runtime would not need to track file handle references.
 
 2. Customizing the runtime provides a greater level of control over how a program executes, and allows parts of the runtime to be removed if it is known that the program will not use them.
 
@@ -256,6 +259,8 @@ A program written in a functional programming language combines a pure functiona
    3. A false sense of security, because the execution environment may violate assumptions made when reasoning about the program.
 
    By developing part of a program at the runtime level, we can entirely eliminate representations of some side effects from the pure functional core.
+
+We provide an [example](examples/sleep/README.md#pruning-the-lean-runtime) of how a functional program can run more efficiently when it uses a custom runtime.
 
 ## Credits
 

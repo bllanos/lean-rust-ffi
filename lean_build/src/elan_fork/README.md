@@ -24,7 +24,7 @@ Date:   Wed Mar 18 12:29:29 2026 +0000
     chore: Release
 ```
 
-At the time, Elan was distributed under either the MIT or Apache 2.0 licenses (the same licenses used by `lean-build`). Copies of Elan's license files are included in this directory.
+At the time, Elan was distributed under either the MIT or Apache 2.0 licenses (the same licenses used by [`lean-build`](../../README.md)). Copies of Elan's license files are included in this directory.
 
 ## Modifications
 
@@ -35,11 +35,11 @@ Aside from the limited scope of the code included from Elan, the following other
    2. To make builds more deterministic by reducing reliance on data from external systems.
 2. Code was changed to return an error when it would otherwise have modified files or directories, to avoid modifying the user's Lean installation.
 3. [`thiserror`](https://github.com/dtolnay/thiserror) was used instead of [`error-chain`](https://github.com/rust-lang-deprecated/error-chain), which is deprecated.
-4. Toolchain resolution no longer requires a directory argument but uses the current directory when the toolhain is not overridden by the `ELAN_TOOLCHAIN` environment variable.
+4. When the toolchain is not overridden by the `ELAN_TOOLCHAIN` environment variable, toolchain resolution no longer requires a directory argument but uses the current directory.
 
 ## Rationale for inclusion
 
 We forked some of Elan's code because:
 
 1. Removing dependencies unneeded by the subset of the code that was forked improves build times and saves disk space.
-2. Elan was not published on `crates.io` (see <https://crates.io/search?q=elan>) at the time of writing, which would prevent `lean-build` from being published to `crates.io` (as [explained in the Cargo book](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#local-paths-in-published-crates)).
+2. Elan was not published on `crates.io` (see <https://crates.io/search?q=elan>) at the time of writing, which would prevent `lean-build` from being published to `crates.io` (as [explained in the Cargo book](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#local-paths-in-published-crates)). We are not planning to publish `lean-build` to `crates.io`, but a non-`crates.io` dependency may still be an obstacle to some users.

@@ -41,7 +41,9 @@ There are three programs demonstrating sleep operations. Each one is implemented
 
 ### Sequential
 
-The `sequential` program sleeps for 1 second, then 2 seconds, and so forth until sleeping for 5 seconds. At the end of each sleep, it prints the number of seconds spent sleeping. Afterwards, it sleeps for 6 seconds, then 5 seconds, and so forth until sleeping for 1 second.
+The `sequential` program sleeps for 0, 1, 2, 3, 4, and then 5 seconds. These sequential operations take 15 seconds in total. At the end of each sleep, it prints the number of seconds spent sleeping.
+
+Afterwards, it sleeps for 6 seconds, then 5 seconds, and so forth until sleeping for 1 second, adding 21 seconds to the program execution time so that the program executes for 36 seconds in total.
 
 The program output is as follows:
 
@@ -89,7 +91,7 @@ Run the program using the following command:
 cargo run -p sleeper-lean --bin sequential
 ```
 
-Sleep and I/O operations in this program are implemented in Rust and are used as external definitions in Lean. The Lean code in [`Sequential.lean`](lean/sequential/Sequential.lean) and [`Sleeper.lean`](lean/sleeper/Sleeper.lean) is similar to that in the pure Lean version, [`Sequential.lean`](lean/pure_lean/Sequential.lean) and [`Sleeper.lean`](lean/pure_lean/Sleeper.lean), differing only in naming and in time data formats for easier integration with Rust code. The Rust code and the Lean code that wraps it were designed to have similar interfaces to Lean's standard library.
+Sleep and I/O operations in this program are implemented in Rust and are used as external definitions in Lean. The Lean code in [`Sequential.lean`](lean/sequential/Sequential.lean) and [`Sleeper.lean`](lean/sleeper/Sleeper.lean) is similar to that in the pure Lean version, [`pure_lean/Sequential.lean`](lean/pure_lean/Sequential.lean) and [`pure_lean/Sleeper.lean`](lean/pure_lean/Sleeper.lean), differing only in naming and in time data formats for easier integration with Rust code. The Rust code and the Lean code that wraps it were designed to have similar interfaces to the equivalent code in Lean's standard library.
 
 ### Concurrent
 
@@ -346,20 +348,20 @@ Dependency relationships are structured as follows:
 2. Rust `-sys` libraries that wrap Lean libraries declare dependencies on Rust libraries that mirror the dependencies between Lean libraries. `extern crate` directives in Rust code are needed to force the dependencies to be linked as there are no explicit Rust code dependencies between the crates ([example](rust/concurrent_sys/src/lib.rs)).
 3. To build executables from Lean code that depends on Rust code, there are Rust executables that call entrypoint functions (e.g. [`concurrent_main()`](lean/concurrent/Concurrent.lean)) defined in Lean libraries.
 
-Each programming language is responsible for compiling its own code, but Rust tooling is used to orchestrate compilation commands for both languages and to link libraries together into executables. Giving one linker toolchain control over all link operations makes it easier to manage link-time dependencies in a systematic way and prevent link-time errors. The cost of this strategy is some added boilerplate code to wrap foreign libraries, as shown in the diagram above. We made Rust's build tools responsible linking because they are more mature and have a larger ecosystem than Lean's build tools. Note that this means there is no need for the `crate-type` attribute specifying what kind of build artifact to generate from Rust code as Rust build artifacts never need to be used by Lean's build tools.
+Each programming language is responsible for compiling its own code, but Rust's build tools orchestrate compilation commands for both languages and link libraries together into executables. Giving one language's toolchain control over all linking operations makes it easier to manage link-time dependencies in a systematic way and prevent link-time errors. The cost of this strategy is some added boilerplate code to wrap foreign libraries, as shown in the diagram above. We made Rust's build tools responsible for linking because they are more mature and have a larger ecosystem than Lean's build tools. Note that, with this approach, there is no need for the [`crate-type` attribute](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-crate-type-field) specifying what kind of build artifact to generate from Rust code since Rust build artifacts are never used by Lean's build tools.
 
 For more information on build artifacts and linking, see <https://doc.rust-lang.org/reference/linkage.html>.
 
 ### Static versus dynamic linking
 
-Following the [arguments expressed in `min-sized-rust`](https://github.com/johnthagen/min-sized-rust#dynamic-linking-why-it-doesnt-work), we use static linking to create executables that only depend on shared (i.e. dynamically-linked) libraries that are already pre-installed on most platforms (e.g. `libm`).
+Following the [arguments expressed in `min-sized-rust`](https://github.com/johnthagen/min-sized-rust#dynamic-linking-why-it-doesnt-work), we primarily use static linking to create executables. We only allow executables to depend on shared (i.e. dynamically-linked) libraries that are already pre-installed on most platforms (e.g. `libm`).
 
-If we wanted to support running Lean code that depends on Rust in Lean's interpreter, it would be necessary to create shared libraries (either instead of, or in addition to, static libraries) and use them with the Lean interpreter's [`--load-dynlib`](https://lean-lang.org/doc/reference/latest/Run-Time-Code/Foreign-Function-Interface/#The-Lean-Language-Reference--Run-Time-Code--Foreign-Function-Interface--____LSQ_extern_RSQ_--in-the-Interpreter) argument.
+If we wanted to support running Lean code that depends on Rust in Lean's interpreter, we would need to create shared libraries (either instead of, or in addition to, static libraries) and use them with the Lean interpreter's [`--load-dynlib`](https://lean-lang.org/doc/reference/latest/Run-Time-Code/Foreign-Function-Interface/#The-Lean-Language-Reference--Run-Time-Code--Foreign-Function-Interface--____LSQ_extern_RSQ_--in-the-Interpreter) argument.
 
 Running foreign code in the Lean interpreter is seldom needed, however. Consider that:
 
 1. Any undefined behavior in foreign code would affect the Lean interpreter internally and could lead to unexpected results.
-2. Foreign code is especially useful for implementing side effects, but using [#eval](https://lean-lang.org/doc/reference/latest/Interacting-with-Lean/#Lean___Parser___Command___eval) to evaluate code with side-effects is unusual. Side effects would occur while viewing code in an editor that automatically runs `#eval` commands. It is dangerous if viewing code may modify one's system.
+2. Foreign code is especially useful for implementing side effects, but using [#eval](https://lean-lang.org/doc/reference/latest/Interacting-with-Lean/#Lean___Parser___Command___eval) to evaluate code with side-effects is unusual. Side effects would occur while viewing code in an editor that automatically runs `#eval` commands. Code that may modify one's system when viewed is potentially dangerous.
 
 ## Rust code design
 
@@ -370,15 +372,15 @@ This example does _not_ demonstrate how to do the following:
 
 The motivations behind the design are to:
 
-1. Avoid dependencies on anything other than the standard library with respect to asynchronous code, which provides the following benefits:
+1. Avoid dependencies on anything other than the Rust standard library with respect to asynchronous code, which provides the following benefits:
    1. Faster builds
    2. No need to choose a third-party asynchronous code ecosystem, [which is not an easy decision](https://rust-lang.github.io/async-book/08_ecosystem/00_chapter.html#determining-ecosystem-compatibility)
 2. Choose one type of asynchronous operation, sleeping, for simplicity, but still explore it in depth:
-   1. Accommodate all the ways of using the operation assuming that it only needs to be composed with itself and with short synchronous operations
-   2. Avoid approaches that incur high performance overhead, such as spawning background threads or starting a general-purpose asynchronous runtime
+   1. Accommodate all the ways of using the operation assuming that it only needs to be composed with itself and with short synchronous operations.
+   2. Avoid approaches that incur high performance overhead, such as spawning background threads or starting a general-purpose asynchronous runtime.
    3. Avoid global variables or other non-local interactions between code. Asynchronous runtimes often introduce such interactions.
-   4. Hint at how a wider range of asynchronous operations could be supported
-3. Reveal some of the subtleties of supporting asynchronous operations that would normally be hidden inside third-party asynchronous runtimes
+   4. Hint at how a wider range of asynchronous operations could be supported.
+3. Reveal some of the subtleties of supporting asynchronous operations that would normally be hidden inside third-party asynchronous runtimes.
 
 For a more scalable approach to implementing time-related asynchronous operations, see the following article [cited in the Tokio runtime's source code](https://docs.rs/tokio/1.49.0/src/tokio/runtime/time/mod.rs.html#85):
 
@@ -386,7 +388,7 @@ For a more scalable approach to implementing time-related asynchronous operation
 
 Given that sleeping is the only supported asynchronous operation, the example never needs to handle the case where another operation needs to interrupt a sleep operation. All sleep operations last for known times, so concurrent operations can be scheduled as follows:
 
-1. Equal sleep operations are merged into one sleep operation, after which operations that followed the sleep operations are scheduled
+1. Equal sleep operations are merged into one sleep operation, after which operations that followed the sleep operations are scheduled.
 2. The shorter sleep operation in a pair of unequal sleep operations is scheduled first, after which the remaining part of the longer sleep operation is scheduled with operations that followed the shorter operation.
 
 This design allows sleeping to be implemented using [`std::thread::sleep`](https://doc.rust-lang.org/std/thread/fn.sleep.html). Otherwise, like fully-featured asynchronous runtimes, we would need a system call that can select from multiple possible event sources while respecting a time limit (such as [explained in _Operating Systems: Three Easy Pieces_ by Remzi H. Arpaci-Dusseau and Andrea C. Arpaci-Dusseau](https://pages.cs.wisc.edu/~remzi/OSTEP/threads-events.pdf)). For simplicity, sleeping until a specified time is not supported, as the example cannot guarantee that any interleaved synchronous operations will be sufficiently brief to avoid overshooting the deadline. Sleep operations last at least as long as the times specified by their arguments.
@@ -409,7 +411,7 @@ In Rust code, in contrast, the [`AsyncIo`](./rust/async_effect/src/async_io.rs) 
 
 The [`EAsyncIO`](./lean/async_effect/AsyncEffect/AsyncIO.lean) Lean type cancels other asynchronous operations in a set of concurrent operations when one operation in the set resolves to an error. To do this, `EAsyncIO`'s `concurrently` operation is implemented on top of `AsyncIO.select`, rather than `AsyncIO.concurrently`. `AsyncIO` is a thin wrapper over a Rust type, [`LeanAsyncIo`](./rust/async_effect_ffi/src/async_io.rs), and is similar to Lean's [`BaseAsync`](https://github.com/leanprover/lean4/blob/3c6317b6d77a565b4217532d1190ac6955dba842/src/Std/Async/Basic.lean#L387) type, which does not handle errors.
 
-Lean's own equivalent of `EAsyncIO`, [`EAsync`](https://github.com/leanprover/lean4/blob/3c6317b6d77a565b4217532d1190ac6955dba842/src/Std/Async/Basic.lean#L568) implements short-circuiting of concurrent asynchronous operations by [awaiting concurrent operations in series](https://github.com/leanprover/lean4/blob/3c6317b6d77a565b4217532d1190ac6955dba842/src/Std/Async/Basic.lean#L797), skipping later `await` actions when one resolves to an error. This behavior differs from the Rust-backed `EAsyncIO`, because `EAsync` short-circuits on results in the order in which they are awaited, not in the order in which they resolve.
+Lean's own equivalent of `EAsyncIO`, [`EAsync`](https://github.com/leanprover/lean4/blob/3c6317b6d77a565b4217532d1190ac6955dba842/src/Std/Async/Basic.lean#L568) implements short-circuiting of concurrent asynchronous operations by [awaiting concurrent operations in series](https://github.com/leanprover/lean4/blob/07dd2c9bf4d711a56791de8177eed41170860ef4/src/Std/Async/Basic.lean#L797), skipping later `await` actions when one resolves to an error. This behavior differs from the Rust-backed `EAsyncIO`, because `EAsync` short-circuits on results in the order in which they are awaited, not in the order in which they resolve.
 
 There is no pure Rust implementation of `EAsyncIO`, as the code would be similar to `EAsyncIO` (but translated into Rust) and would not demonstrate anything sufficiently interesting. Therefore, the `short_circuit` example has a pure Lean version and a Rust-backed Lean version, but no pure Rust version.
 
