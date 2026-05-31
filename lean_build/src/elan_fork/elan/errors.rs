@@ -37,6 +37,12 @@ pub enum Error {
         path: PathBuf,
         type_str: &'static str,
     },
+    #[error("no Lean toolchain found at '{}': expected '{}' to exist",
+        .path.display(), .lean_binary_path.display())]
+    MissingLeanBinary {
+        path: PathBuf,
+        lean_binary_path: PathBuf,
+    },
     #[error(transparent)]
     Utils(#[from] elan_utils::Error),
     #[error(transparent)]

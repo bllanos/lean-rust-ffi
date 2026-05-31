@@ -176,16 +176,18 @@ impl Cfg {
                 return Ok(Some((UnresolvedToolchainDesc(name), reason)));
             }
 
-            // Then look for 'lean-toolchain'
+            // Then look for 'lean-toolchain' (we should not be silent about invalid files here)
             let toolchain_file = d.join("lean-toolchain");
-            if let Ok(desc) = read_unresolved_toolchain_desc_from_file(self, &toolchain_file) {
+            if toolchain_file.is_file() {
+                let desc = read_unresolved_toolchain_desc_from_file(self, &toolchain_file)?;
                 let reason = OverrideReason::ToolchainFile(toolchain_file);
                 return Ok(Some((desc, reason)));
             }
 
             // Then look for 'leanpkg.toml'
             let leanpkg_file = d.join("leanpkg.toml");
-            if let Ok(content) = utils::read_file("leanpkg.toml", &leanpkg_file) {
+            if leanpkg_file.is_file() {
+                let content = utils::read_file("leanpkg.toml", &leanpkg_file)?;
                 let value =
                     content
                         .parse::<toml::Value>()
@@ -213,7 +215,10 @@ impl Cfg {
 
             dir = d.parent();
 
-            if dir == Some(&self.toolchains_dir)
+            // NOTE: `dir` is already canonicalized, so `==` should be good here
+            let toolchains_dir =
+                utils::canonicalize_path(&self.toolchains_dir, &|n| notify(n.into()));
+            if dir == Some(&*toolchains_dir)
                 && let Some(last) = d.file_name()
                 && let Some(last) = last.to_str()
             {

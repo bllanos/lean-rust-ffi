@@ -17,9 +17,9 @@ Date:   Mon May 26 10:58:24 2025 +0200
 The latest Elan commit that the code has been updated for feature parity with is:
 
 ```text
-commit 3d5138e1526a569a23901b8ee559032793cf445e (tag: v4.2.1)
+commit 35628cce104e81a25514c4dcd224491351145818 (tag: v4.2.2)
 Author: Sebastian Ullrich <sebasti@nullri.ch>
-Date:   Wed Mar 18 12:29:29 2026 +0000
+Date:   Thu May 28 11:23:33 2026 +0000
 
     chore: Release
 ```

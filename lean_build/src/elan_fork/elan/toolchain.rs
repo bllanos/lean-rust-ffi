@@ -244,26 +244,34 @@ fn try_parse_path_toolchain(
     let lean_binary = path
         .join("bin")
         .join(format!("lean{}", std::env::consts::EXE_SUFFIX));
-    if !lean_binary.is_file() {
-        return Ok(None); // Not a valid Lean toolchain directory
+    if lean_binary.is_file() {
+        return Ok(Some(ToolchainDesc::Path { path }));
     }
 
-    Ok(Some(ToolchainDesc::Path { path }))
+    // Error on path-like input rather than falling through to toolchain-name parsing, which would
+    // silently attempt to download a default toolchain.
+    if looks_like_explicit_path(path_str) {
+        return Err(Error::MissingLeanBinary {
+            path,
+            lean_binary_path: lean_binary,
+        });
+    }
+
+    Ok(None)
+}
+
+fn looks_like_explicit_path(s: &str) -> bool {
+    Path::new(s).is_absolute()
+        || s.starts_with("./")
+        || s.starts_with("../")
+        || s.starts_with(".\\")
+        || s.starts_with("..\\")
 }
 
 // Unit tests in Elan's code that access the filesystem have been removed
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn nonexistent_path_returns_none() {
-        let result =
-            try_parse_path_toolchain("/nonexistent/path/that/does/not/exist", Path::new("/"))
-                .unwrap();
-
-        assert!(result.is_none());
-    }
 
     #[test]
     fn toolchain_name_not_mistaken_for_path() {
